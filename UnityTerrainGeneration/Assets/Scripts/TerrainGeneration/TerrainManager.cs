@@ -1,6 +1,5 @@
-﻿
+﻿using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.TerrainUtils;
 
 namespace UnityTerrainGeneration.TerrainGeneration
 {
@@ -53,10 +52,22 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			private readonly Chunk[] _subChunks;
 			public Chunk[] SubChunks { get => _subChunks; }
 
-			public Chunk(GameObject objRef)
+			private Chunk(GameObject objRef)
 			{
 				ObjRef = objRef;
 				ShouldBeActive = false;
+				HasMesh = false;
+				_subChunks = null;
+			}
+
+			public Chunk(TerrainManager terrainManager) : this(new GameObject("ScriptGeneratedChunk"))
+			{
+				ObjRef.transform.SetParent(terrainManager.originTran);
+				ObjRef.transform.localPosition = Vector3.zero;
+				ObjRef.AddComponent<MeshFilter>();
+				ObjRef.AddComponent<MeshRenderer>();
+				ObjRef.AddComponent<MeshCollider>();
+				ObjRef.GetComponent<Renderer>().material = terrainManager.terrainMat;
 			}
 		}
 	}

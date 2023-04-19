@@ -1,7 +1,7 @@
-
 using UnityEngine;
+using UnityTerrainGeneration.TerrainGeneration;
 
-namespace UnityTerrainGeneration.TerrainGeneration
+namespace UnityTerrainGeneration.Controllers
 {
 	public class TerrainOriginController : MonoBehaviour
 	{
