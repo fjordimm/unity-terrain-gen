@@ -1,5 +1,6 @@
 ﻿using Unity.VisualScripting;
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace UnityTerrainGeneration.TerrainGeneration
 {
@@ -27,7 +28,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			terrainGene = new TerrainGene(rand);
 		}
 
-		public void Begin()
+		public void BeginGeneration()
 		{
 			GameObject chunkGameObj = new("ScriptGeneratedChunk");
 			chunkGameObj.transform.SetParent(originTran);
@@ -43,14 +44,16 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			chunkGameObj.GetComponent<MeshCollider>().sharedMesh = mesh;
 		}
 
+		private const int CHUNK_SUBDIVS = 4;
+
 		private class Chunk
 		{
 			public GameObject ObjRef { get; }
 			public bool ShouldBeActive { get; set; }
 			public bool HasMesh { get; set; }
 
-			private readonly Chunk[] _subChunks;
-			public Chunk[] SubChunks { get => _subChunks; }
+			private Chunk[,] _subChunks;
+			public Chunk[,] SubChunks { get => _subChunks; }
 
 			private Chunk(GameObject objRef)
 			{
@@ -68,6 +71,34 @@ namespace UnityTerrainGeneration.TerrainGeneration
 				ObjRef.AddComponent<MeshRenderer>();
 				ObjRef.AddComponent<MeshCollider>();
 				ObjRef.GetComponent<Renderer>().material = terrainManager.terrainMat;
+			}
+
+			public void GenerateMesh(TerrainManager terrainManager)
+			{
+				Mesh mesh = ChunkMeshGenerator.MakeMesh(terrainManager.terrainGene, 10, 1f, 0, 0);
+
+				ObjRef.GetComponent<MeshFilter>().mesh = mesh;
+				ObjRef.GetComponent<MeshCollider>().sharedMesh = mesh;
+
+				HasMesh = true;
+			}
+
+			public void MakeSubChunks()
+			{
+				if (_subChunks != null)
+				{
+					_subChunks = new Chunk[CHUNK_SUBDIVS, CHUNK_SUBDIVS];
+				}
+			}
+		}
+
+		private class ChunkDict
+		{
+			private readonly Dictionary<uint, Chunk> dict;
+
+			public ChunkDict()
+			{
+				dict = new Dictionary<uint, Chunk>();
 			}
 		}
 	}

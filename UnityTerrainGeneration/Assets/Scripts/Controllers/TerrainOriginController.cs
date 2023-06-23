@@ -11,14 +11,14 @@ namespace UnityTerrainGeneration.Controllers
 		[SerializeField]
 		private Material TerrainMat;
 
-		private const ulong Seed = 0;
+		private const ulong SEED = 0;
 
 		private TerrainManager terrainManager;
 
 		void Start()
 		{
-			terrainManager = new TerrainManager(this.transform, PlayerTran, TerrainMat, Seed);
-			terrainManager.Begin();
+			terrainManager = new TerrainManager(this.transform, PlayerTran, TerrainMat, SEED);
+			terrainManager.BeginGeneration();
 		}
 	}
 }
