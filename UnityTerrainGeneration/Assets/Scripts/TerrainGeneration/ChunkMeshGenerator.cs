@@ -2,6 +2,16 @@
 
 namespace UnityTerrainGeneration.TerrainGeneration
 {
+	[System.Flags]
+	public enum LodTransitions
+	{
+		None = 0,
+		Left = 1,
+		Right = 2,
+		Top = 4,
+		Bottom = 8
+	}
+
 	internal static class ChunkMeshGenerator
 	{
 		private static readonly Color GREENGRASS = new(0.1f, 0.25f, 0.05f);
@@ -9,13 +19,16 @@ namespace UnityTerrainGeneration.TerrainGeneration
 		private static readonly Color WHITESNOW = new(0.5f, 0.5f, 0.6f);
 		private static readonly Color DEBUGCOLOR = new(1f, 0f, 0f);
 
-		public static Mesh MakeMesh(TerrainGene terrainGene, int size, float chunkScale, int xOff, int zOff)
+		public static Mesh MakeMesh(TerrainGene terrainGene, int size, float chunkScale, int xOff, int zOff, LodTransitions lodTransitions)
 		{
 			int xSize = size;
 			int zSize = size;
 
 			if ((xSize + 3) * (zSize + 3) > 65535)
 			{ Debug.LogException(new System.Exception("The chunk size is too big.")); }
+
+			if (xSize % 2 != 0 || zSize % 2 != 0)
+			{ Debug.LogException(new System.Exception("The chunk size must be even.")); }
 
 			Vector3[] verticesPre;
 			{
@@ -25,10 +38,44 @@ namespace UnityTerrainGeneration.TerrainGeneration
 				{
 					for (int r = 0; r < zSize + 3; r++)
 					{
-						float xVal = chunkScale * (c + 2 * xOff);
-						float zVal = chunkScale * (r + 2 * zOff);
+						/*int cc = c;
+						int rr = r;
 
-						verticesPre[c * (zSize + 3) + r] = new Vector3(xVal, terrainGene.HeightAt(xVal, zVal), zVal);
+						if (doLodTransition)
+						{
+							if ((c < 2 || c > xSize) && r % 2 == 0)
+							{ rr--; }
+
+							//if ((r < 2 || r > zSize) && c % 2 == 0)
+							//{ cc--; }
+						}*/
+
+						float xVal = chunkScale * (c - 1 + (size + 0) * xOff);
+						float zVal = chunkScale * (r - 1 + (size + 0) * zOff);
+
+						bool doZLodTran = (
+							(lodTransitions.HasFlag(LodTransitions.Left) && c < 2)
+							|| (lodTransitions.HasFlag(LodTransitions.Right) && c > xSize)
+						) && r % 2 == 0;
+
+						bool doXLodTran = (
+							(lodTransitions.HasFlag(LodTransitions.Bottom) && r < 2)
+							|| (lodTransitions.HasFlag(LodTransitions.Top) && r > zSize)
+						) && c % 2 == 0;
+
+						float yVal;
+						if (doZLodTran || doXLodTran)
+						{
+							float y1 = terrainGene.HeightAt(xVal - (doXLodTran ? chunkScale : 0f), zVal - (doZLodTran ? chunkScale : 0f));
+							float y2 = terrainGene.HeightAt(xVal + (doXLodTran ? chunkScale : 0f), zVal + (doZLodTran ? chunkScale : 0f));
+							yVal = (y1 + y2) / 2f;
+						}
+						else
+						{
+							yVal = terrainGene.HeightAt(xVal, zVal);
+						}
+
+						verticesPre[c * (zSize + 3) + r] = new Vector3(xVal, yVal, zVal);
 					}
 				}
 			}
