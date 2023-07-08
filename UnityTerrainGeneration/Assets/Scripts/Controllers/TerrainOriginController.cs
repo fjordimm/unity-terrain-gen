@@ -17,7 +17,7 @@ namespace UnityTerrainGeneration.Controllers
 
 		void Start()
 		{
-			terrainManager = new TerrainManager(this.transform, PlayerTran, TerrainMat, SEED);
+			terrainManager = new TerrainManager(this, this.transform, PlayerTran, TerrainMat, SEED);
 			terrainManager.BeginGeneration();
 		}
 	}
