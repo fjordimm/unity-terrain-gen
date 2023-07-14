@@ -3,19 +3,17 @@ using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using System;
-using UnityEngine.Assertions;
-using UnityEditor.Experimental.GraphView;
 
 namespace UnityTerrainGeneration.TerrainGeneration
 {
 	internal sealed class TerrainManager
 	{
 		private readonly int ChunkMeshSize = 32;
-		private readonly int NumLods = 1;
-		private readonly float ChunkLod0PartialScale = 8.0f; // The width of one triangle for the lowest LOD chunk
+		private readonly int NumLods = 4;
+		private readonly float ChunkLod0PartialScale = 4.0f; // The width of one triangle for the lowest LOD chunk
 		private readonly float[] ChunkScales; // The scale of a chunk for each LOD
 
-		private readonly float RenderDist = 3000f;
+		private readonly long RenderDist = 16;
 
 		private readonly MonoBehaviour controller;
 		private readonly Transform originTran;
@@ -33,7 +31,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			ChunkScales = new float[NumLods];
 			for (int i = 0; i < ChunkScales.Length; i++)
 			{
-				ChunkScales[i] = ChunkLod0PartialScale * ChunkMeshSize / Mathf.Pow(ChunkMeshSize, (float)i);
+				ChunkScales[i] = ChunkLod0PartialScale * ChunkMeshSize / (float)(1 << i);
 			}
 
 			controller = _controller;
@@ -64,20 +62,22 @@ namespace UnityTerrainGeneration.TerrainGeneration
 				{
 					ChunkCoords goalCoords = ToChunkCoords(playerTran.position.x, playerTran.position.z, lod);
 
+					// Possible Optimization: precalculate the chunk render distances
+					long chunkRenderDist = RenderDist;
+
 					// Spirals out from the player's position
 					long cX = goalCoords.x;
 					long cZ = goalCoords.z;
 					byte cDirection = 0;
 					int cLength = 1;
 					int cLengthCounter = 0;
-					long chunkRenderDist = (long)(RenderDist / ChunkScales[lod]);
 					while (cX >= goalCoords.x - chunkRenderDist && cX <= goalCoords.x + chunkRenderDist && cZ >= goalCoords.z - chunkRenderDist && cZ <= goalCoords.z + chunkRenderDist)
 					{
 						{
 							ChunkCoords currentSpiralCoords = new ChunkCoords(cX, cZ);
 
 							Chunk chunk;
-							bool alreadyHasChunk = chunkDicts[0].TryGetValue(currentSpiralCoords, out Chunk ch);
+							bool alreadyHasChunk = chunkDicts[lod].TryGetValue(currentSpiralCoords, out Chunk ch);
 							if (alreadyHasChunk)
 							{
 								chunk = ch;
@@ -85,13 +85,13 @@ namespace UnityTerrainGeneration.TerrainGeneration
 							else
 							{
 								chunk = new Chunk(this);
-								chunkDicts[0].Add(currentSpiralCoords, chunk);
+								chunkDicts[lod].Add(currentSpiralCoords, chunk);
 							}
 
 							if (!chunk.ShouldBeActive)
 							{
 								chunk.ShouldBeActive = true;
-								chunkQueue.AddLast((currentSpiralCoords, 0, chunk));
+								chunkQueue.AddLast((currentSpiralCoords, lod, chunk));
 							}
 						}
 
@@ -142,17 +142,37 @@ namespace UnityTerrainGeneration.TerrainGeneration
 		{
 			while (true)
 			{
-				// Debug.Log($"queue has {chunkQueue.Count} elements");
-
 				if (chunkQueue.Count > 0)
 				{
 					var node = chunkQueue.First;
 					chunkQueue.RemoveFirst();
 
+					/*
 					(float x, float z) realCoords = ToRealCoords(node.Value.coords, node.Value.lod);
-
 					float dist = Mathf.Sqrt(Mathf.Pow(realCoords.x - playerTran.position.x, 2f) + Mathf.Pow(realCoords.z - playerTran.position.z, 2f));
-					if (dist < RenderDist)
+
+					bool shouldRenderMesh = false;
+					if (dist < FullRenderDist)
+					{
+						if (node.Value.lod == NumLods - 1)
+						{ shouldRenderMesh = true; }
+						else
+						{
+							shouldRenderMesh = true;
+						}
+					}
+					*/
+
+					ChunkCoords playerCoords = ToChunkCoords(playerTran.position.x, playerTran.position.z, node.Value.lod);
+					long cdist = Math.Max(Math.Abs(node.Value.coords.x - playerCoords.x), Math.Abs(node.Value.coords.z - playerCoords.z));
+
+					bool shouldRenderMesh;
+					if (node.Value.lod == NumLods - 1)
+					{ shouldRenderMesh = cdist <= RenderDist; }
+					else
+					{ shouldRenderMesh = cdist <= RenderDist && cdist > (RenderDist / 2); }
+					
+					if (shouldRenderMesh)
 					{
 						if (!node.Value.chunk.HasMesh)
 						{

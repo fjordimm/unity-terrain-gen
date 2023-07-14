@@ -1,4 +1,5 @@
-﻿using Unity.VisualScripting;
+﻿using System;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace UnityTerrainGeneration.TerrainGeneration
@@ -6,7 +7,6 @@ namespace UnityTerrainGeneration.TerrainGeneration
 	internal class TerrainGene
 	{
 		OpenSimplexNoise[] osnRough;
-		OpenSimplexNoise[] osnMounds;
 
 		public TerrainGene(System.Random rand)
 		{
@@ -22,15 +22,17 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 			double y = 0f;
 
-			double ampl = 5.0;
-			double freq = 0.03125;
+			double ampl = 3.0;
+			double freq = 0.005;
 			for (int i = 0; i < osnRough.Length; i++)
 			{
 				y += ampl * osnRough[i].Evaluate(x * freq, z * freq);
 				ampl *= 0.5;
-				freq *= 2.0;
+				freq *= 1.7;
 			}
 
+			//y = 4.9 * Math.Exp(y);
+			y *= 10.0;
 			return (float)y;
 		}
 	}
