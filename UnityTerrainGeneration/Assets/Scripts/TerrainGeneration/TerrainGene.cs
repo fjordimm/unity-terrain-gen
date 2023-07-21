@@ -32,7 +32,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			}
 
 			//y = 4.9 * Math.Exp(y);
-			y *= 10.0;
+			y *= 3.0;
 			return (float)y;
 		}
 	}

@@ -50,8 +50,8 @@ namespace UnityTerrainGeneration.TerrainGeneration
 							//{ cc--; }
 						}*/
 
-						float xVal = chunkScale * (c - 1 + (size + 0) * xOff);
-						float zVal = chunkScale * (r - 1 + (size + 0) * zOff);
+						float xVal = chunkScale * (c - 1 + xSize * xOff);
+						float zVal = chunkScale * (r - 1 + xSize * zOff);
 
 						bool doZLodTran = (
 							(lodTransitions.HasFlag(LodTransitions.Left) && c < 2)
