@@ -169,29 +169,41 @@ namespace UnityTerrainGeneration.TerrainGeneration
 						long zDiff = playerCoords.z - node.Value.coords.z; if (zDiff < 0) { zDiff = -zDiff + 0; }
 						long dist = Math.Max(xDiff, zDiff);
 						shouldRenderMesh = dist <= RenderDist && dist > RenderDist / 2;
-
-						// DEBUG:
-						shouldRenderMesh = false;
 					}
 					else
 					{
+						/*
 						ChunkCoords playerCoordsB = ToChunkCoords(playerTran.position.x, playerTran.position.z, node.Value.lod - 1);
 						long xDiffB = playerCoordsB.x - node.Value.coords.x / 2; if (xDiffB < 0) { xDiffB = -xDiffB + 1; }
 						long zDiffB = playerCoordsB.z - node.Value.coords.z / 2; if (zDiffB < 0) { zDiffB = -zDiffB + 1; }
 						long distB = Math.Max(xDiffB, zDiffB);
+						*/
 
-						ChunkCoords playerCoordsA = ToChunkCoords(playerTran.position.x, playerTran.position.z, node.Value.lod);
-						long xDiffA = playerCoordsA.x - node.Value.coords.x; if (xDiffA < 0) { xDiffA = -xDiffA + 1; }
-						long zDiffA = playerCoordsA.z - node.Value.coords.z; if (zDiffA < 0) { zDiffA = -zDiffA + 1; }
-						long distA = Math.Max(xDiffA, zDiffA);
+						ChunkCoords playerCoords = ToChunkCoords(playerTran.position.x, playerTran.position.z, node.Value.lod);
 
+						long coordX = node.Value.coords.x;
+						long coordZ = node.Value.coords.z;
+						long pcoordX = playerCoords.x;
+						long pcoordZ = playerCoords.z;
+
+						long coordXr; if (coordX >= 0) coordXr = (coordX / 2) * 2; else coordXr = ((coordX - 1) / 2) * 2;
+						long coordZr; if (coordZ >= 0) coordZr = (coordZ / 2) * 2; else coordZr = ((coordZ - 1) / 2) * 2;
+						long pcoordXr; if (pcoordX >= 0) pcoordXr = (pcoordX / 2) * 2; else pcoordXr = ((pcoordX - 1) / 2) * 2;
+						long pcoordZr; if (pcoordZ >= 0) pcoordZr = (pcoordZ / 2) * 2; else pcoordZr = ((pcoordZ - 1) / 2) * 2;
+
+						long xDiff = pcoordX - coordX; if (xDiff < 0) { xDiff = -xDiff; }
+						long zDiff = pcoordZ - coordZ; if (zDiff < 0) { zDiff = -zDiff; }
+
+						long xDiffR = pcoordXr - coordXr; if (xDiffR < 0) { xDiffR = -xDiffR; }
+						long zDiffR = pcoordZr - coordZr; if (zDiffR < 0) { zDiffR = -zDiffR; }
+
+						long dist = Math.Max(xDiff, zDiff);
+						long distR = Math.Max(xDiffR, zDiffR);
+						
 						if (node.Value.lod == NumLods - 1)
-						{ shouldRenderMesh = (distA/2)*2 <= RenderDist; }
+						{ shouldRenderMesh = distR <= RenderDist; }
 						else
-						{ shouldRenderMesh = (distA/2)*2 <= RenderDist && distA > RenderDist / 2; }
-
-						// DEBUG:
-						// shouldRenderMesh = node.Value.coords.x >= 0 && node.Value.coords.z >= 0;
+						{ shouldRenderMesh = distR <= RenderDist && dist > RenderDist / 2; }
 					}
 					
 					if (shouldRenderMesh)
@@ -245,7 +257,6 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			public void GenerateMesh(TerrainManager terrainManager, float chunkScale, int offX, int offZ, LodTransitions lodTransitions = LodTransitions.None)
 			{
 				Mesh mesh = ChunkMeshGenerator.MakeMesh(terrainManager.terrainGene, terrainManager.ChunkMeshSize, chunkScale / terrainManager.ChunkMeshSize, offX, offZ, lodTransitions);
-				Debug.Log("" + (chunkScale / terrainManager.ChunkMeshSize));
 
 				objRef.GetComponent<MeshFilter>().mesh = mesh;
 				objRef.GetComponent<MeshCollider>().sharedMesh = mesh;
