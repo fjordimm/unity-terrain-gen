@@ -31,8 +31,8 @@ namespace UnityTerrainGeneration.TerrainGeneration
 				freq *= 1.7;
 			}
 
-			//y = 4.9 * Math.Exp(y);
-			y *= 3.0;
+			y = 4.9 * Math.Exp(y);
+			// y *= 3.0;
 			return (float)y;
 		}
 	}

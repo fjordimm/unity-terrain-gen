@@ -11,7 +11,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 	{
 		private readonly int ChunkMeshSize = 32;
 		private readonly int NumLods = 4;
-		private readonly float ChunkLod0PartialScale = 1.0f; // The width of one triangle for the lowest LOD chunk
+		private readonly float ChunkLod0PartialScale = 8.0f; // The width of one triangle for the lowest LOD chunk
 		private readonly float[] ChunkScales; // The scale of a chunk for each LOD
 
 		private readonly long RenderDist = 4;
@@ -165,20 +165,40 @@ namespace UnityTerrainGeneration.TerrainGeneration
 					if (node.Value.lod == 0)
 					{
 						ChunkCoords playerCoords = ToChunkCoords(playerTran.position.x, playerTran.position.z, node.Value.lod);
-						long xDiff = playerCoords.x - node.Value.coords.x; if (xDiff < 0) { xDiff = -xDiff + 0; }
-						long zDiff = playerCoords.z - node.Value.coords.z; if (zDiff < 0) { zDiff = -zDiff + 0; }
+
+						long coordX = node.Value.coords.x;
+						long coordZ = node.Value.coords.z;
+						long pcoordX = playerCoords.x;
+						long pcoordZ = playerCoords.z;
+
+						long xDiff = pcoordX - coordX; if (xDiff < 0) { xDiff = -xDiff; }
+						long zDiff = pcoordZ - coordZ; if (zDiff < 0) { zDiff = -zDiff; }
 						long dist = Math.Max(xDiff, zDiff);
+
 						shouldRenderMesh = dist <= RenderDist && dist > RenderDist / 2;
+					}
+					else if (node.Value.lod == NumLods - 1)
+					{
+						ChunkCoords playerCoords = ToChunkCoords(playerTran.position.x, playerTran.position.z, node.Value.lod);
+
+						long coordX = node.Value.coords.x;
+						long coordZ = node.Value.coords.z;
+						long pcoordX = playerCoords.x;
+						long pcoordZ = playerCoords.z;
+
+						long coordXr; if (coordX >= 0) coordXr = (coordX / 2) * 2; else coordXr = ((coordX - 1) / 2) * 2;
+						long coordZr; if (coordZ >= 0) coordZr = (coordZ / 2) * 2; else coordZr = ((coordZ - 1) / 2) * 2;
+						long pcoordXr; if (pcoordX >= 0) pcoordXr = (pcoordX / 2) * 2; else pcoordXr = ((pcoordX - 1) / 2) * 2;
+						long pcoordZr; if (pcoordZ >= 0) pcoordZr = (pcoordZ / 2) * 2; else pcoordZr = ((pcoordZ - 1) / 2) * 2;
+
+						long xDiffR = pcoordXr - coordXr; if (xDiffR < 0) { xDiffR = -xDiffR; }
+						long zDiffR = pcoordZr - coordZr; if (zDiffR < 0) { zDiffR = -zDiffR; }
+						long distR = Math.Max(xDiffR, zDiffR);
+
+						shouldRenderMesh = distR <= RenderDist;
 					}
 					else
 					{
-						/*
-						ChunkCoords playerCoordsB = ToChunkCoords(playerTran.position.x, playerTran.position.z, node.Value.lod - 1);
-						long xDiffB = playerCoordsB.x - node.Value.coords.x / 2; if (xDiffB < 0) { xDiffB = -xDiffB + 1; }
-						long zDiffB = playerCoordsB.z - node.Value.coords.z / 2; if (zDiffB < 0) { zDiffB = -zDiffB + 1; }
-						long distB = Math.Max(xDiffB, zDiffB);
-						*/
-
 						ChunkCoords playerCoords = ToChunkCoords(playerTran.position.x, playerTran.position.z, node.Value.lod);
 
 						long coordX = node.Value.coords.x;
@@ -193,17 +213,13 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 						long xDiff = pcoordX - coordX; if (xDiff < 0) { xDiff = -xDiff; }
 						long zDiff = pcoordZ - coordZ; if (zDiff < 0) { zDiff = -zDiff; }
+						long dist = Math.Max(xDiff, zDiff);
 
 						long xDiffR = pcoordXr - coordXr; if (xDiffR < 0) { xDiffR = -xDiffR; }
 						long zDiffR = pcoordZr - coordZr; if (zDiffR < 0) { zDiffR = -zDiffR; }
-
-						long dist = Math.Max(xDiff, zDiff);
 						long distR = Math.Max(xDiffR, zDiffR);
-						
-						if (node.Value.lod == NumLods - 1)
-						{ shouldRenderMesh = distR <= RenderDist; }
-						else
-						{ shouldRenderMesh = distR <= RenderDist && dist > RenderDist / 2; }
+
+						shouldRenderMesh = distR <= RenderDist && dist > RenderDist / 2;
 					}
 					
 					if (shouldRenderMesh)
@@ -211,9 +227,6 @@ namespace UnityTerrainGeneration.TerrainGeneration
 						if (!node.Value.chunk.HasMesh)
 						{
 							node.Value.chunk.GenerateMesh(this, ChunkScales[node.Value.lod], (int)node.Value.coords.x, (int)node.Value.coords.z);
-
-							// DEBUG:
-							node.Value.chunk.objRef.transform.transform.localPosition += new Vector3(0f, 5f * node.Value.lod, 0f);
 						}
 
 						node.Value.chunk.SetObjActive(true);
@@ -236,8 +249,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			public bool HasMesh { get; private set; }
 			public LodTransitions CurrentLodTrans { get; private set; }
 
-			// TODO: make this private again im just doing it temporarily
-			public readonly GameObject objRef;
+			private readonly GameObject objRef;
 
 			public Chunk(TerrainManager terrainManager)
 			{
