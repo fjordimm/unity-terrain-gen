@@ -3,10 +3,11 @@ using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using System;
+using UnityEditor.Experimental.GraphView;
 
 namespace UnityTerrainGeneration.TerrainGeneration
 {
-	internal sealed class TerrainManager
+	internal class TerrainManager
 	{
 		private readonly int ChunkMeshSize = 32;
 		private readonly int NumLods = 4;
@@ -201,8 +202,6 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 							// DEBUG:
 							node.Value.chunk.objRef.transform.transform.localPosition += new Vector3(0f, 5f * node.Value.lod, 0f);
-							// if (node.Value.coords.z == 0)
-							// { Debug.Log($"(LOD {node.Value.lod}) at x = {node.Value.coords.x}"); }
 						}
 
 						node.Value.chunk.SetObjActive(true);
@@ -246,6 +245,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			public void GenerateMesh(TerrainManager terrainManager, float chunkScale, int offX, int offZ, LodTransitions lodTransitions = LodTransitions.None)
 			{
 				Mesh mesh = ChunkMeshGenerator.MakeMesh(terrainManager.terrainGene, terrainManager.ChunkMeshSize, chunkScale / terrainManager.ChunkMeshSize, offX, offZ, lodTransitions);
+				Debug.Log("" + (chunkScale / terrainManager.ChunkMeshSize));
 
 				objRef.GetComponent<MeshFilter>().mesh = mesh;
 				objRef.GetComponent<MeshCollider>().sharedMesh = mesh;

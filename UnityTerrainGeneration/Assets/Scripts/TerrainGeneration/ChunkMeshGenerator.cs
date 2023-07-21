@@ -19,6 +19,17 @@ namespace UnityTerrainGeneration.TerrainGeneration
 		private static readonly Color WHITESNOW = new(0.5f, 0.5f, 0.6f);
 		private static readonly Color DEBUGCOLOR = new(1f, 0f, 0f);
 
+		// DEBUG:
+		private static readonly Color[] DEBUG_LOD_COLORS =
+		{
+			new(1f, 0f, 0f),
+			new(1f, 1f, 0f),
+			new(0f, 1f, 0f),
+			new(0f, 1f, 1f),
+			new(0f, 0f, 1f),
+			new(1f, 0f, 1f)
+		};
+
 		public static Mesh MakeMesh(TerrainGene terrainGene, int size, float chunkScale, int xOff, int zOff, LodTransitions lodTransitions)
 		{
 			int xSize = size;
@@ -129,7 +140,24 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 					Color col = Color.Lerp(GREENGRASS, GRAYSTONE, steepness);
 					colors[i] = col;*/
-					colors[i] = GREENGRASS;
+
+					Color theColorToUse;
+					if (chunkScale == 0.125f)
+					{ theColorToUse = DEBUG_LOD_COLORS[0]; }
+					else if (chunkScale == 0.25f)
+					{ theColorToUse = DEBUG_LOD_COLORS[1]; }
+					else if (chunkScale == 0.5f)
+					{ theColorToUse = DEBUG_LOD_COLORS[2]; }
+					else if (chunkScale == 1.0f)
+					{ theColorToUse = DEBUG_LOD_COLORS[3]; }
+					else if (chunkScale == 2.0f)
+					{ theColorToUse = DEBUG_LOD_COLORS[4]; }
+					else if (chunkScale == 4.0f)
+					{ theColorToUse = DEBUG_LOD_COLORS[5]; }
+					else
+					{ theColorToUse = new(0f, 0f, 0f); }
+
+					colors[i] = theColorToUse;
 				}
 			}
 
