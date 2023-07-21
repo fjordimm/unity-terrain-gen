@@ -30,6 +30,9 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			new(1f, 0f, 1f)
 		};
 
+		private static readonly Color DEBUG_COLOR_RED = new(1f, 0f, 0f);
+		private static readonly Color DEBUG_COLOR_BLUE = new(0f, 0f, 1f);
+
 		public static Mesh MakeMesh(TerrainGene terrainGene, int size, float chunkScale, int xOff, int zOff, LodTransitions lodTransitions)
 		{
 			int xSize = size;
@@ -141,7 +144,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 					Color col = Color.Lerp(GREENGRASS, GRAYSTONE, steepness);
 					colors[i] = col;*/
 
-					///*
+					/*
 					// DEBUG:
 					Color theColorToUse;
 					if (chunkScale == 1f)
@@ -159,7 +162,10 @@ namespace UnityTerrainGeneration.TerrainGeneration
 					else
 					{ theColorToUse = new(0f, 0f, 0f); }
 					colors[i] = theColorToUse;
-					//*/
+					*/
+
+					// DEBUG:
+					colors[i] = Color.Lerp(DEBUG_COLOR_RED, DEBUG_COLOR_BLUE, Mathf.Log(chunkScale / 8f + 1f));
 
 					// colors[i] = GREENGRASS;
 				}

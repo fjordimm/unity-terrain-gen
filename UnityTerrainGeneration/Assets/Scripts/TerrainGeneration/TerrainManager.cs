@@ -10,8 +10,9 @@ namespace UnityTerrainGeneration.TerrainGeneration
 	internal class TerrainManager
 	{
 		private readonly int ChunkMeshSize = 32;
-		private readonly int NumLods = 4;
-		private readonly float ChunkLod0PartialScale = 8.0f; // The width of one triangle for the lowest LOD chunk
+		private readonly int NumLods = 5;
+		private readonly float Lod0PartialChunkScale = 3.0f; // The width of one triangle for the lowest LOD chunk
+		private readonly float[] PartialChunkScales; // The width of one triangle for each LOD
 		private readonly float[] ChunkScales; // The scale of a chunk for each LOD
 
 		private readonly long RenderDist = 4;
@@ -29,10 +30,12 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 		public TerrainManager(MonoBehaviour _controller, Transform _originTran, Transform _playerTran, Material _terrainMat, ulong _seed)
 		{
+			PartialChunkScales = new float[NumLods];
 			ChunkScales = new float[NumLods];
-			for (int i = 0; i < ChunkScales.Length; i++)
+			for (int i = 0; i < NumLods; i++)
 			{
-				ChunkScales[i] = ChunkLod0PartialScale * ChunkMeshSize / (float)(1 << i);
+				PartialChunkScales[i] = Lod0PartialChunkScale * (float)(1 << i);
+				ChunkScales[i] = PartialChunkScales[i] * ChunkMeshSize;
 			}
 
 			controller = _controller;
@@ -47,19 +50,6 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			for (int i = 0; i < NumLods; i++)
 			{ chunkDicts[i] = new Dictionary<ChunkCoords, Chunk>(); }
 			chunkQueue = new LinkedList<(ChunkCoords coords, int lod, Chunk chunk)>();
-
-			// DEBUG:
-			/*
-			for (int i = NumLods - 1; i >= 0; i--)
-			{
-				string thingy = "";
-				for (float f = -100f; f <= 100f; f += 3f)
-				{
-					thingy += String.Format("{0, -3}", ToChunkCoords(f, 0f, i).x);
-				}
-				Debug.Log($"Lod #{i}: " + thingy);
-			}
-			*/
 		}
 
 		public void BeginGeneration()
@@ -72,12 +62,11 @@ namespace UnityTerrainGeneration.TerrainGeneration
 		{
 			while (true)
 			{
-				for (int lod = NumLods - 1; lod >= 0; lod--)
+				for (int lod = 0; lod < NumLods; lod++)
 				{
 					ChunkCoords goalCoords = ToChunkCoords(playerTran.position.x, playerTran.position.z, lod);
 
-					// Possible Optimization: precalculate the chunk render distances
-					long chunkRenderDist = RenderDist * 2;
+					long chunkRenderDist = RenderDist + 1;
 
 					// Spirals out from the player's position
 					long cX = goalCoords.x;
@@ -140,7 +129,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 						// In case the player moved in the middle of the coroutine, then restart the spiral
 						ChunkCoords realChunkCoords = ToChunkCoords(playerTran.position.x, playerTran.position.z, lod);
 						if (!goalCoords.Equals(realChunkCoords))
-						{ lod = NumLods - 1; break; }
+						{ lod = 0; break; }
 
 						yield return null;
 					}
@@ -162,7 +151,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 					chunkQueue.RemoveFirst();
 
 					bool shouldRenderMesh;
-					if (node.Value.lod == 0)
+					if (node.Value.lod == NumLods - 1)
 					{
 						ChunkCoords playerCoords = ToChunkCoords(playerTran.position.x, playerTran.position.z, node.Value.lod);
 
@@ -177,7 +166,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 						shouldRenderMesh = dist <= RenderDist && dist > RenderDist / 2;
 					}
-					else if (node.Value.lod == NumLods - 1)
+					else if (node.Value.lod == 0)
 					{
 						ChunkCoords playerCoords = ToChunkCoords(playerTran.position.x, playerTran.position.z, node.Value.lod);
 
@@ -226,7 +215,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 					{
 						if (!node.Value.chunk.HasMesh)
 						{
-							node.Value.chunk.GenerateMesh(this, ChunkScales[node.Value.lod], (int)node.Value.coords.x, (int)node.Value.coords.z);
+							node.Value.chunk.GenerateMesh(this, PartialChunkScales[node.Value.lod], (int)node.Value.coords.x, (int)node.Value.coords.z);
 						}
 
 						node.Value.chunk.SetObjActive(true);
@@ -268,7 +257,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 			public void GenerateMesh(TerrainManager terrainManager, float chunkScale, int offX, int offZ, LodTransitions lodTransitions = LodTransitions.None)
 			{
-				Mesh mesh = ChunkMeshGenerator.MakeMesh(terrainManager.terrainGene, terrainManager.ChunkMeshSize, chunkScale / terrainManager.ChunkMeshSize, offX, offZ, lodTransitions);
+				Mesh mesh = ChunkMeshGenerator.MakeMesh(terrainManager.terrainGene, terrainManager.ChunkMeshSize, chunkScale, offX, offZ, lodTransitions);
 
 				objRef.GetComponent<MeshFilter>().mesh = mesh;
 				objRef.GetComponent<MeshCollider>().sharedMesh = mesh;
