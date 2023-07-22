@@ -10,15 +10,15 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 		public TerrainGene(System.Random rand)
 		{
-			osnRough = new OpenSimplexNoise[27];
+			osnRough = new OpenSimplexNoise[25];
 			for (int i = 0; i < osnRough.Length; i++)
 			{ osnRough[i] = new OpenSimplexNoise(rand.Next()); }
 		}
 
 		public float HeightAt(float _x, float _z)
 		{
-			double x = 0.5 * _x;
-			double z = 0.5 * _z;
+			double x = 0.1 * _x;
+			double z = 0.1 * _z;
 
 			double y = 0f;
 
@@ -31,7 +31,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 				freq *= 1.7;
 			}
 
-			y = 4.9 * Math.Exp(y);
+			y = 15 * Math.Exp(y);
 			// y *= 3.0;
 			return (float)y;
 		}

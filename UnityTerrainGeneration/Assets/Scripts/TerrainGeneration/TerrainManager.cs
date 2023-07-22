@@ -10,8 +10,8 @@ namespace UnityTerrainGeneration.TerrainGeneration
 	internal class TerrainManager
 	{
 		private readonly int ChunkMeshSize = 32;
-		private readonly int NumLods = 10;
-		private readonly float Lod0PartialChunkScale = 0.0625f; // The width of one triangle for the lowest LOD chunk
+		private readonly int NumLods = 5;
+		private readonly float Lod0PartialChunkScale = 0.1f; // The width of one triangle for the lowest LOD chunk
 		private readonly float[] PartialChunkScales; // The width of one triangle for each LOD
 		private readonly float[] ChunkScales; // The scale of a chunk for each LOD
 
@@ -154,6 +154,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 					bool withinRenderDist;
 					bool withinLodGap;
+					bool withinReasonableDist;
 					if (lod == NumLods - 1)
 					{
 						ChunkCoords playerCoords = ToChunkCoords(playerTran.position.x, playerTran.position.z, lod);
@@ -169,6 +170,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 						withinRenderDist = dist <= RenderDist;
 						withinLodGap = dist <= RenderDist / 2;
+						withinReasonableDist = dist <= RenderDist * 2;
 					}
 					else if (lod == 0)
 					{
@@ -190,6 +192,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 						withinRenderDist = distR <= RenderDist;
 						withinLodGap = false;
+						withinReasonableDist = distR <= RenderDist * 2;
 					}
 					else
 					{
@@ -215,6 +218,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 						withinRenderDist = distR <= RenderDist;
 						withinLodGap = dist <= RenderDist / 2;
+						withinReasonableDist = dist <= RenderDist * 2;
 					}
 
 					if (withinRenderDist && !node.Value.chunk.HasMesh)
@@ -248,16 +252,22 @@ namespace UnityTerrainGeneration.TerrainGeneration
 						{
 							node.Value.chunk.SetObjActive(true);
 							chunkQueues[lod].AddLast(node);
+						}
+					}
+					else if (withinReasonableDist && node.Value.chunk.HasMesh && lod != NumLods - 1)
+					{
+						ChunkCoords macCoords = new ChunkCoords(node.Value.coords.x / 2, node.Value.coords.z / 2);
+						bool gotMac = chunkDicts[lod + 1].TryGetValue(macCoords, out Chunk mac);
 
-							// node.Value.chunk.objRef.transform.transform.position += new Vector3(0f, 30f, 0f);
-
-							/*
-							// DEBUG:
-							if (gotMini1) mini1.objRef.transform.transform.position += new Vector3(0f, -10f, 0f);
-							if (gotMini2) mini2.objRef.transform.transform.position += new Vector3(0f, -10f, 0f);
-							if (gotMini3) mini3.objRef.transform.transform.position += new Vector3(0f, -10f, 0f);
-							if (gotMini4) mini4.objRef.transform.transform.position += new Vector3(0f, -10f, 0f);
-							*/
+						if (gotMac && mac.objRef.activeInHierarchy)
+						{
+							node.Value.chunk.ShouldBeActive = false;
+							node.Value.chunk.SetObjActive(false);
+						}
+						else
+						{
+							node.Value.chunk.SetObjActive(true);
+							chunkQueues[lod].AddLast(node);
 						}
 					}
 					else

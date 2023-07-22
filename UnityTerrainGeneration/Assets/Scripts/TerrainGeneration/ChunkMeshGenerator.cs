@@ -138,14 +138,15 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 				for (int i = 0; i < colors.Length; i++)
 				{
+					/*
 					float steepness = Vector3.Angle(Vector3.up, normals[i]) / 45f;
 					steepness = 1f / (1f + Mathf.Exp(-30f * (steepness - 0.9f)));
-
 					Color col = Color.Lerp(GREENGRASS, GRAYSTONE, steepness);
 					colors[i] = col;
+					*/
 
 					// DEBUG:
-					// colors[i] = Color.Lerp(DEBUG_COLOR_RED, DEBUG_COLOR_BLUE, Mathf.Log(chunkScale / 8f + 1f));
+					colors[i] = Color.Lerp(DEBUG_COLOR_RED, DEBUG_COLOR_BLUE, Mathf.Sqrt(chunkScale));
 
 					// colors[i] = GREENGRASS;
 				}
