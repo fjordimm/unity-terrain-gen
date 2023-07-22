@@ -10,12 +10,12 @@ namespace UnityTerrainGeneration.TerrainGeneration
 	internal class TerrainManager
 	{
 		private readonly int ChunkMeshSize = 32;
-		private readonly int NumLods = 5;
-		private readonly float Lod0PartialChunkScale = 0.25f; // The width of one triangle for the lowest LOD chunk
+		private readonly int NumLods = 10;
+		private readonly float Lod0PartialChunkScale = 0.0625f; // The width of one triangle for the lowest LOD chunk
 		private readonly float[] PartialChunkScales; // The width of one triangle for each LOD
 		private readonly float[] ChunkScales; // The scale of a chunk for each LOD
 
-		private readonly long RenderDist = 5;
+		private readonly long RenderDist = 7;
 
 		private readonly MonoBehaviour controller;
 		private readonly Transform originTran;

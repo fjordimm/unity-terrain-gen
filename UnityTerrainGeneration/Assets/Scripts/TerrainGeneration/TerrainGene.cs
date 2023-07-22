@@ -10,7 +10,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 		public TerrainGene(System.Random rand)
 		{
-			osnRough = new OpenSimplexNoise[15];
+			osnRough = new OpenSimplexNoise[27];
 			for (int i = 0; i < osnRough.Length; i++)
 			{ osnRough[i] = new OpenSimplexNoise(rand.Next()); }
 		}
