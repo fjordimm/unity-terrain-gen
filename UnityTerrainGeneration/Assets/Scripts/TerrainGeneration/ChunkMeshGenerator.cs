@@ -145,9 +145,9 @@ namespace UnityTerrainGeneration.TerrainGeneration
 					colors[i] = col;*/
 
 					// DEBUG:
-					// colors[i] = Color.Lerp(DEBUG_COLOR_RED, DEBUG_COLOR_BLUE, Mathf.Log(chunkScale / 8f + 1f));
+					colors[i] = Color.Lerp(DEBUG_COLOR_RED, DEBUG_COLOR_BLUE, Mathf.Log(chunkScale / 8f + 1f));
 
-					colors[i] = GREENGRASS;
+					// colors[i] = GREENGRASS;
 				}
 			}
 
