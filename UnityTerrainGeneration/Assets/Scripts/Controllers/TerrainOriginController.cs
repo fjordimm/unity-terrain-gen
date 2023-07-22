@@ -11,7 +11,7 @@ namespace UnityTerrainGeneration.Controllers
 		[SerializeField]
 		private Material TerrainMat;
 
-		private const ulong SEED = 0;
+		private const int SEED = 0;
 
 		private TerrainManager terrainManager;
 

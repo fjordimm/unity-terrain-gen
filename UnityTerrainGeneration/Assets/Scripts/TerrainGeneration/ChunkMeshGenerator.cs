@@ -33,7 +33,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 		private static readonly Color DEBUG_COLOR_RED = new(1f, 0f, 0f);
 		private static readonly Color DEBUG_COLOR_BLUE = new(0f, 0f, 1f);
 
-		public static Mesh MakeMesh(TerrainGene terrainGene, int size, float chunkScale, int xOff, int zOff, LodTransitions lodTransitions)
+		public static Mesh MakeMesh(TerrainGene terrainGene, int size, float chunkScale, long xOff, long zOff, LodTransitions lodTransitions)
 		{
 			int xSize = size;
 			int zSize = size;

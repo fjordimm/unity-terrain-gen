@@ -4,38 +4,41 @@ using System.Collections;
 using System.Collections.Generic;
 using System;
 using UnityEditor.Experimental.GraphView;
+using UnityEngine.AI;
 
 namespace UnityTerrainGeneration.TerrainGeneration
 {
 	internal class TerrainManager
 	{
-		private readonly int ChunkMeshSize = 32;
-		private readonly int NumLods = 5;
-		private readonly float Lod0PartialChunkScale = 0.1f; // The width of one triangle for the lowest LOD chunk
-		private readonly float[] PartialChunkScales; // The width of one triangle for each LOD
-		private readonly float[] ChunkScales; // The scale of a chunk for each LOD
+		private const int CHUNK_MESH_SIZE = 32;
+		private const int NUM_LODS = 3;
+		private const float LOD0_PARTIAL_CHUNK_SCALE = 4.0f; // The width of one triangle for the lowest LOD chunk
+		private static readonly float[] PARTIAL_CHUNK_SCALES = new float[NUM_LODS]; // The width of one triangle for each LOD
+		private static readonly float[] CHUNK_SCALES = new float[NUM_LODS]; // The scale of a chunk for each LOD
 
-		private readonly long RenderDist = 7;
+		private const long CHUNK_RENDER_DIST = 3;
+		private const long SUB_CHUNK_FACTOR = CHUNK_RENDER_DIST * 2 + 1;
 
 		private readonly MonoBehaviour controller;
 		private readonly Transform originTran;
 		private readonly Transform playerTran;
 		private readonly Material terrainMat;
-		private readonly ulong seed;
+		private readonly int seed;
 
 		private readonly System.Random rand;
 		private readonly TerrainGene terrainGene;
-		private readonly Dictionary<ChunkCoords, Chunk>[] chunkDicts;
-		private readonly LinkedList<(ChunkCoords coords, Chunk chunk)>[] chunkQueues;
+		private readonly Dictionary<ChunkCoords, Chunk> chunkDict;
+		private readonly LinkedList<(ChunkCoords coords, Chunk chunk)> activeChunkQueue;
+		private readonly LinkedList<(ChunkCoords coords, int lod, Chunk chunk)> chunkMeshGenQueue;
 
-		public TerrainManager(MonoBehaviour _controller, Transform _originTran, Transform _playerTran, Material _terrainMat, ulong _seed)
+		public TerrainManager(MonoBehaviour _controller, Transform _originTran, Transform _playerTran, Material _terrainMat, int _seed)
 		{
-			PartialChunkScales = new float[NumLods];
-			ChunkScales = new float[NumLods];
-			for (int i = 0; i < NumLods; i++)
+			for (int i = 0; i < NUM_LODS; i++)
 			{
-				PartialChunkScales[i] = Lod0PartialChunkScale * (float)(1 << i);
-				ChunkScales[i] = PartialChunkScales[i] * ChunkMeshSize;
+				if (i == 0) PARTIAL_CHUNK_SCALES[i] = LOD0_PARTIAL_CHUNK_SCALE;
+				else PARTIAL_CHUNK_SCALES[i] = PARTIAL_CHUNK_SCALES[i-1] / SUB_CHUNK_FACTOR;
+
+				CHUNK_SCALES[i] = PARTIAL_CHUNK_SCALES[i] * CHUNK_MESH_SIZE;
 			}
 
 			controller = _controller;
@@ -44,34 +47,26 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			terrainMat = _terrainMat;
 			seed = _seed;
 
-			rand = new System.Random((int)seed);
+			rand = new System.Random(seed);
 			terrainGene = new TerrainGene(rand);
 
-			chunkDicts = new Dictionary<ChunkCoords, Chunk>[NumLods];
-			for (int i = 0; i < NumLods; i++)
-			{ chunkDicts[i] = new Dictionary<ChunkCoords, Chunk>(); }
-
-			chunkQueues = new LinkedList<(ChunkCoords coords, Chunk chunk)>[NumLods];
-			for (int i = 0; i < NumLods; i++)
-			{ chunkQueues[i] = new LinkedList<(ChunkCoords coords, Chunk chunk)>(); }
+			chunkDict = new Dictionary<ChunkCoords, Chunk>();
+			activeChunkQueue = new LinkedList<(ChunkCoords coords, Chunk chunk)>();
+			chunkMeshGenQueue = new LinkedList<(ChunkCoords coords, int lod, Chunk chunk)>();
 		}
 
 		public void BeginGeneration()
 		{
-			for (int i = 0; i < NumLods; i++)
-			{
-				controller.StartCoroutine(EnqueueChunksNearPlayer(i));
-				controller.StartCoroutine(UpdateChunkQueue(i));
-			}
+			controller.StartCoroutine(EnqueueChunksNearPlayer());
+			controller.StartCoroutine(UpdateActiveChunkQueue());
+			controller.StartCoroutine(UpdateChunkMeshGenQueue());
 		}
 
-		private IEnumerator EnqueueChunksNearPlayer(int lod)
+		private IEnumerator EnqueueChunksNearPlayer()
 		{
 			while (true)
 			{
-				ChunkCoords goalCoords = ToChunkCoords(playerTran.position.x, playerTran.position.z, lod);
-
-				long chunkRenderDist = RenderDist + 1;
+				ChunkCoords goalCoords = ToChunkCoords(playerTran.position.x, playerTran.position.z, 0);
 
 				// Spirals out from the player's position
 				long cX = goalCoords.x;
@@ -79,13 +74,13 @@ namespace UnityTerrainGeneration.TerrainGeneration
 				byte cDirection = 0;
 				int cLength = 1;
 				int cLengthCounter = 0;
-				while (cX >= goalCoords.x - chunkRenderDist && cX <= goalCoords.x + chunkRenderDist && cZ >= goalCoords.z - chunkRenderDist && cZ <= goalCoords.z + chunkRenderDist)
+				while (cX >= goalCoords.x - CHUNK_RENDER_DIST && cX <= goalCoords.x + CHUNK_RENDER_DIST && cZ >= goalCoords.z - CHUNK_RENDER_DIST && cZ <= goalCoords.z + CHUNK_RENDER_DIST)
 				{
 					{
 						ChunkCoords currentSpiralCoords = new ChunkCoords(cX, cZ);
 
 						Chunk chunk;
-						bool alreadyHasChunk = chunkDicts[lod].TryGetValue(currentSpiralCoords, out Chunk ch);
+						bool alreadyHasChunk = chunkDict.TryGetValue(currentSpiralCoords, out Chunk ch);
 						if (alreadyHasChunk)
 						{
 							chunk = ch;
@@ -93,13 +88,13 @@ namespace UnityTerrainGeneration.TerrainGeneration
 						else
 						{
 							chunk = new Chunk(this);
-							chunkDicts[lod].Add(currentSpiralCoords, chunk);
+							chunkDict.Add(currentSpiralCoords, chunk);
 						}
 
 						if (!chunk.ShouldBeActive)
 						{
 							chunk.ShouldBeActive = true;
-							chunkQueues[lod].AddLast((currentSpiralCoords, chunk));
+							activeChunkQueue.AddLast((currentSpiralCoords, chunk));
 						}
 					}
 
@@ -132,7 +127,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 					else if (cDirection == 3) { cZ--; }
 
 					// In case the player moved in the middle of the coroutine, then restart the spiral
-					ChunkCoords realChunkCoords = ToChunkCoords(playerTran.position.x, playerTran.position.z, lod);
+					ChunkCoords realChunkCoords = ToChunkCoords(playerTran.position.x, playerTran.position.z, 0);
 					if (!goalCoords.Equals(realChunkCoords))
 					{ break; }
 
@@ -143,137 +138,38 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			}
 		}
 
-		private IEnumerator UpdateChunkQueue(int lod)
+		private IEnumerator UpdateActiveChunkQueue()
 		{
 			while (true)
 			{
-				if (chunkQueues[lod].Count > 0)
+				if (activeChunkQueue.Count > 0)
 				{
-					var node = chunkQueues[lod].First;
-					chunkQueues[lod].RemoveFirst();
+					var llnode = activeChunkQueue.First;
+					activeChunkQueue.RemoveFirst();
 
-					bool withinRenderDist;
-					bool withinLodGap;
-					bool withinReasonableDist;
-					if (lod == NumLods - 1)
+					if (IsWithinRenderDist(0, llnode.Value.coords))
 					{
-						ChunkCoords playerCoords = ToChunkCoords(playerTran.position.x, playerTran.position.z, lod);
-
-						long coordX = node.Value.coords.x;
-						long coordZ = node.Value.coords.z;
-						long pcoordX = playerCoords.x;
-						long pcoordZ = playerCoords.z;
-
-						long xDiff = pcoordX - coordX; if (xDiff < 0) { xDiff = -xDiff; }
-						long zDiff = pcoordZ - coordZ; if (zDiff < 0) { zDiff = -zDiff; }
-						long dist = Math.Max(xDiff, zDiff);
-
-						withinRenderDist = dist <= RenderDist;
-						withinLodGap = dist <= RenderDist / 2;
-						withinReasonableDist = dist <= RenderDist * 2;
-					}
-					else if (lod == 0)
-					{
-						ChunkCoords playerCoords = ToChunkCoords(playerTran.position.x, playerTran.position.z, lod);
-
-						long coordX = node.Value.coords.x;
-						long coordZ = node.Value.coords.z;
-						long pcoordX = playerCoords.x;
-						long pcoordZ = playerCoords.z;
-
-						long coordXr; if (coordX >= 0) coordXr = (coordX / 2) * 2; else coordXr = ((coordX - 1) / 2) * 2;
-						long coordZr; if (coordZ >= 0) coordZr = (coordZ / 2) * 2; else coordZr = ((coordZ - 1) / 2) * 2;
-						long pcoordXr; if (pcoordX >= 0) pcoordXr = (pcoordX / 2) * 2; else pcoordXr = ((pcoordX - 1) / 2) * 2;
-						long pcoordZr; if (pcoordZ >= 0) pcoordZr = (pcoordZ / 2) * 2; else pcoordZr = ((pcoordZ - 1) / 2) * 2;
-
-						long xDiffR = pcoordXr - coordXr; if (xDiffR < 0) { xDiffR = -xDiffR; }
-						long zDiffR = pcoordZr - coordZr; if (zDiffR < 0) { zDiffR = -zDiffR; }
-						long distR = Math.Max(xDiffR, zDiffR);
-
-						withinRenderDist = distR <= RenderDist;
-						withinLodGap = false;
-						withinReasonableDist = distR <= RenderDist * 2;
-					}
-					else
-					{
-						ChunkCoords playerCoords = ToChunkCoords(playerTran.position.x, playerTran.position.z, lod);
-
-						long coordX = node.Value.coords.x;
-						long coordZ = node.Value.coords.z;
-						long pcoordX = playerCoords.x;
-						long pcoordZ = playerCoords.z;
-
-						long coordXr; if (coordX >= 0) coordXr = (coordX / 2) * 2; else coordXr = ((coordX - 1) / 2) * 2;
-						long coordZr; if (coordZ >= 0) coordZr = (coordZ / 2) * 2; else coordZr = ((coordZ - 1) / 2) * 2;
-						long pcoordXr; if (pcoordX >= 0) pcoordXr = (pcoordX / 2) * 2; else pcoordXr = ((pcoordX - 1) / 2) * 2;
-						long pcoordZr; if (pcoordZ >= 0) pcoordZr = (pcoordZ / 2) * 2; else pcoordZr = ((pcoordZ - 1) / 2) * 2;
-
-						long xDiff = pcoordX - coordX; if (xDiff < 0) { xDiff = -xDiff; }
-						long zDiff = pcoordZ - coordZ; if (zDiff < 0) { zDiff = -zDiff; }
-						long dist = Math.Max(xDiff, zDiff);
-
-						long xDiffR = pcoordXr - coordXr; if (xDiffR < 0) { xDiffR = -xDiffR; }
-						long zDiffR = pcoordZr - coordZr; if (zDiffR < 0) { zDiffR = -zDiffR; }
-						long distR = Math.Max(xDiffR, zDiffR);
-
-						withinRenderDist = distR <= RenderDist;
-						withinLodGap = dist <= RenderDist / 2;
-						withinReasonableDist = dist <= RenderDist * 2;
-					}
-
-					if (withinRenderDist && !node.Value.chunk.HasMesh)
-					{
-						node.Value.chunk.GenerateMesh(this, PartialChunkScales[lod], (int)node.Value.coords.x, (int)node.Value.coords.z);
-					}
-
-					if (withinRenderDist && !withinLodGap)
-					{
-						node.Value.chunk.SetObjActive(true);
-						chunkQueues[lod].AddLast(node);
-					}
-					else if (withinRenderDist && withinLodGap && lod != 0)
-					{
-						ChunkCoords mini1Coords = new ChunkCoords(node.Value.coords.x * 2, node.Value.coords.z * 2);
-						ChunkCoords mini2Coords = new ChunkCoords(node.Value.coords.x * 2 + 1, node.Value.coords.z * 2);
-						ChunkCoords mini3Coords = new ChunkCoords(node.Value.coords.x * 2, node.Value.coords.z * 2 + 1);
-						ChunkCoords mini4Coords = new ChunkCoords(node.Value.coords.x * 2 + 1, node.Value.coords.z * 2 + 1);
-
-						bool gotMini1 = chunkDicts[lod - 1].TryGetValue(mini1Coords, out Chunk mini1);
-						bool gotMini2 = chunkDicts[lod - 1].TryGetValue(mini2Coords, out Chunk mini2);
-						bool gotMini3 = chunkDicts[lod - 1].TryGetValue(mini3Coords, out Chunk mini3);
-						bool gotMini4 = chunkDicts[lod - 1].TryGetValue(mini4Coords, out Chunk mini4);
-
-						if (gotMini1 && mini1.HasMesh && gotMini2 && mini2.HasMesh && gotMini3 && mini3.HasMesh && gotMini4 && mini4.HasMesh)
+						if (!llnode.Value.chunk.HasMesh)
 						{
-							node.Value.chunk.ShouldBeActive = false;
-							node.Value.chunk.SetObjActive(false);
+							chunkMeshGenQueue.AddLast((llnode.Value.coords, 0, llnode.Value.chunk));
 						}
 						else
 						{
-							node.Value.chunk.SetObjActive(true);
-							chunkQueues[lod].AddLast(node);
-						}
-					}
-					else if (withinReasonableDist && node.Value.chunk.HasMesh && lod != NumLods - 1)
-					{
-						ChunkCoords macCoords = new ChunkCoords(node.Value.coords.x / 2, node.Value.coords.z / 2);
-						bool gotMac = chunkDicts[lod + 1].TryGetValue(macCoords, out Chunk mac);
+							llnode.Value.chunk.SetObjActive(true);
 
-						if (gotMac && mac.objRef.activeInHierarchy)
-						{
-							node.Value.chunk.ShouldBeActive = false;
-							node.Value.chunk.SetObjActive(false);
+							if (IsWithinHalfRenderDist(0, llnode.Value.coords))
+							{
+								// DEBUG:
+								// llnode.Value.chunk.GameObj.transform.position += new Vector3(0f, 10f, 0f);
+							}
 						}
-						else
-						{
-							node.Value.chunk.SetObjActive(true);
-							chunkQueues[lod].AddLast(node);
-						}
+
+						activeChunkQueue.AddLast(llnode);
 					}
 					else
 					{
-						node.Value.chunk.ShouldBeActive = false;
-						node.Value.chunk.SetObjActive(false);
+						llnode.Value.chunk.ShouldBeActive = false;
+						llnode.Value.chunk.SetObjActive(false);
 					}
 				}
 
@@ -281,38 +177,93 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			}
 		}
 
+		private IEnumerator UpdateChunkMeshGenQueue()
+		{
+			while (true)
+			{
+				if (chunkMeshGenQueue.Count > 0)
+				{
+					var llnode = chunkMeshGenQueue.First;
+					chunkMeshGenQueue.RemoveFirst();
+
+					if (true)
+					{
+						if (llnode.Value.chunk.HasMesh)
+						{ Debug.LogWarning("The chunkMeshGenQueue got to a chunk that already had a mesh."); }
+
+						llnode.Value.chunk.GenerateMesh(this, PARTIAL_CHUNK_SCALES[llnode.Value.lod], llnode.Value.coords.x, llnode.Value.coords.z);
+					}
+				}
+
+				yield return null;
+			}
+		}
+
+		private bool IsWithinRenderDist(int lod, ChunkCoords chunkCoords)
+		{
+			ChunkCoords playerCoords = ToChunkCoords(playerTran.position.x, playerTran.position.z, lod);
+
+			long coordX = chunkCoords.x;
+			long coordZ = chunkCoords.z;
+			long pcoordX = playerCoords.x;
+			long pcoordZ = playerCoords.z;
+
+			long xDiff = pcoordX - coordX; if (xDiff < 0) { xDiff = -xDiff; }
+			long zDiff = pcoordZ - coordZ; if (zDiff < 0) { zDiff = -zDiff; }
+			long dist = Math.Max(xDiff, zDiff);
+
+			return dist <= CHUNK_RENDER_DIST;
+		}
+
+		private bool IsWithinHalfRenderDist(int lod, ChunkCoords chunkCoords)
+		{
+			ChunkCoords playerCoords = ToChunkCoords(playerTran.position.x, playerTran.position.z, lod);
+
+			long coordX = chunkCoords.x;
+			long coordZ = chunkCoords.z;
+			long pcoordX = playerCoords.x;
+			long pcoordZ = playerCoords.z;
+
+			long xDiff = pcoordX - coordX; if (xDiff < 0) { xDiff = -xDiff; }
+			long zDiff = pcoordZ - coordZ; if (zDiff < 0) { zDiff = -zDiff; }
+			long dist = Math.Max(xDiff, zDiff);
+
+			return dist <= CHUNK_RENDER_DIST / 2;
+		}
+
 		private sealed class Chunk
 		{
 			public bool ShouldBeActive { get; set; }
 			public bool HasMesh { get; private set; }
-			public LodTransitions CurrentLodTrans { get; private set; }
+			public GameObject GameObj { get; }
 
-			public readonly GameObject objRef;
+			private Chunk[,] _subChunks;
+			public Chunk[,] SubChunks { get => _subChunks; }
 
 			public Chunk(TerrainManager terrainManager)
 			{
-				objRef = new GameObject("ScriptGeneratedChunk");
 				ShouldBeActive = false;
 				HasMesh = false;
+				GameObj = new GameObject("ScriptGeneratedChunk");
+				_subChunks = null;
 
-				objRef.transform.SetParent(terrainManager.originTran);
-				objRef.transform.localPosition = Vector3.zero;
-				objRef.AddComponent<MeshFilter>();
-				objRef.AddComponent<MeshRenderer>();
-				objRef.AddComponent<MeshCollider>();
-				objRef.GetComponent<Renderer>().material = terrainManager.terrainMat;
-				objRef.SetActive(false);
+				GameObj.transform.SetParent(terrainManager.originTran);
+				GameObj.transform.localPosition = Vector3.zero;
+				GameObj.AddComponent<MeshFilter>();
+				GameObj.AddComponent<MeshRenderer>();
+				GameObj.AddComponent<MeshCollider>();
+				GameObj.GetComponent<Renderer>().material = terrainManager.terrainMat;
+				GameObj.SetActive(false);
 			}
 
-			public void GenerateMesh(TerrainManager terrainManager, float chunkScale, int offX, int offZ, LodTransitions lodTransitions = LodTransitions.None)
+			public void GenerateMesh(TerrainManager terrainManager, float chunkScale, long offX, long offZ)
 			{
-				Mesh mesh = ChunkMeshGenerator.MakeMesh(terrainManager.terrainGene, terrainManager.ChunkMeshSize, chunkScale, offX, offZ, lodTransitions);
+				Mesh mesh = ChunkMeshGenerator.MakeMesh(terrainManager.terrainGene, CHUNK_MESH_SIZE, chunkScale, offX, offZ, LodTransitions.None);
 
-				objRef.GetComponent<MeshFilter>().mesh = mesh;
-				objRef.GetComponent<MeshCollider>().sharedMesh = mesh;
+				GameObj.GetComponent<MeshFilter>().mesh = mesh;
+				GameObj.GetComponent<MeshCollider>().sharedMesh = mesh;
 
 				HasMesh = true;
-				CurrentLodTrans = lodTransitions;
 			}
 
 			public void SetObjActive(bool active)
@@ -320,7 +271,23 @@ namespace UnityTerrainGeneration.TerrainGeneration
 				if (active && !HasMesh)
 				{ Debug.LogWarning("Setting chunk active while it has no mesh."); }
 
-				objRef.SetActive(active);
+				GameObj.SetActive(active);
+			}
+
+			public void MakeSubChunks(TerrainManager terrainManager)
+			{
+				if (_subChunks is not null)
+				{ Debug.LogWarning("Trying to make sub chunks while _subChunks isn't null."); }
+
+				_subChunks = new Chunk[SUB_CHUNK_FACTOR, SUB_CHUNK_FACTOR];
+
+				for (int i = 0; i < SUB_CHUNK_FACTOR; i++)
+				{
+					for (int j = 0; j < SUB_CHUNK_FACTOR; j++)
+					{
+						_subChunks[i, j] = new Chunk(terrainManager);
+					}
+				}
 			}
 		}
 
@@ -351,13 +318,13 @@ namespace UnityTerrainGeneration.TerrainGeneration
 		{
 			long outX;
 			{
-				float pre = x / ChunkScales[lod];
+				float pre = x / CHUNK_SCALES[lod];
 				if (pre < 0.0) { outX = (long)pre - 1; }
 				else { outX = (long)pre; }
 			}
 			long outZ;
 			{
-				float pre = z / ChunkScales[lod];
+				float pre = z / CHUNK_SCALES[lod];
 				if (pre < 0.0) { outZ = (long)pre - 1; }
 				else { outZ = (long)pre; }
 			}
@@ -367,8 +334,8 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 		private (float x, float z) ToRealCoords(ChunkCoords coords, int lod)
 		{
-			float outX = coords.x * ChunkScales[lod];
-			float outZ = coords.z * ChunkScales[lod];
+			float outX = coords.x * CHUNK_SCALES[lod];
+			float outZ = coords.z * CHUNK_SCALES[lod];
 
 			return (outX, outZ);
 		}
