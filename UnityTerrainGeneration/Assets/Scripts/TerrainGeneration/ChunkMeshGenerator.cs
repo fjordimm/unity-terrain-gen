@@ -144,30 +144,10 @@ namespace UnityTerrainGeneration.TerrainGeneration
 					Color col = Color.Lerp(GREENGRASS, GRAYSTONE, steepness);
 					colors[i] = col;*/
 
-					/*
 					// DEBUG:
-					Color theColorToUse;
-					if (chunkScale == 1f)
-					{ theColorToUse = DEBUG_LOD_COLORS[0]; }
-					else if (chunkScale == 2f)
-					{ theColorToUse = DEBUG_LOD_COLORS[1]; }
-					else if (chunkScale == 4f)
-					{ theColorToUse = DEBUG_LOD_COLORS[2]; }
-					else if (chunkScale == 8f)
-					{ theColorToUse = DEBUG_LOD_COLORS[3]; }
-					else if (chunkScale == 16f)
-					{ theColorToUse = DEBUG_LOD_COLORS[4]; }
-					else if (chunkScale == 32f)
-					{ theColorToUse = DEBUG_LOD_COLORS[5]; }
-					else
-					{ theColorToUse = new(0f, 0f, 0f); }
-					colors[i] = theColorToUse;
-					*/
+					// colors[i] = Color.Lerp(DEBUG_COLOR_RED, DEBUG_COLOR_BLUE, Mathf.Log(chunkScale / 8f + 1f));
 
-					// DEBUG:
-					colors[i] = Color.Lerp(DEBUG_COLOR_RED, DEBUG_COLOR_BLUE, Mathf.Log(chunkScale / 8f + 1f));
-
-					// colors[i] = GREENGRASS;
+					colors[i] = GREENGRASS;
 				}
 			}
 
