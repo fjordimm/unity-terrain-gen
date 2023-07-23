@@ -11,12 +11,12 @@ namespace UnityTerrainGeneration.TerrainGeneration
 	internal class TerrainManager
 	{
 		private const int CHUNK_MESH_SIZE = 32;
-		private const int NUM_LODS = 3;
-		private const float LOD0_PARTIAL_CHUNK_SCALE = 4.0f; // The width of one triangle for the lowest LOD chunk
+		private const int NUM_LODS = 5;
+		private const float LOD0_PARTIAL_CHUNK_SCALE = 100.0f; // The width of one triangle for the lowest LOD chunk
 		private static readonly float[] PARTIAL_CHUNK_SCALES = new float[NUM_LODS]; // The width of one triangle for each LOD
 		private static readonly float[] CHUNK_SCALES = new float[NUM_LODS]; // The scale of a chunk for each LOD
 
-		private const long CHUNK_RENDER_DIST = 3;
+		private const long CHUNK_RENDER_DIST = 5;
 		private const long SUB_CHUNK_FACTOR = CHUNK_RENDER_DIST * 2 + 1;
 
 		private readonly MonoBehaviour controller;
@@ -181,18 +181,21 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 		private void UpdateSubChunksRecursively(int lod, ChunkCoords coords, Chunk chunk)
 		{
-			if (lod >= NUM_LODS)
+			if (lod >= NUM_LODS - 1)
 			{ return; }
 
 			if (IsWithinHalfRenderDist(lod, coords))
 			{
-				if (chunk.SubChunkFinishedCount >= SUB_CHUNK_FACTOR * SUB_CHUNK_FACTOR)
+				if (chunk.FinishedAllSubChunks)
 				{
 					for (int i = 0; i < SUB_CHUNK_FACTOR; i++)
 					{
 						for (int j = 0; j < SUB_CHUNK_FACTOR; j++)
 						{
 							chunk.SubChunks[i, j].SetObjActive(true);
+
+							ChunkCoords subCoords = new ChunkCoords(coords.x * SUB_CHUNK_FACTOR + i, coords.z * SUB_CHUNK_FACTOR + j);
+							UpdateSubChunksRecursively(lod + 1, subCoords, chunk.SubChunks[i, j]);
 						}
 					}
 
@@ -203,31 +206,40 @@ namespace UnityTerrainGeneration.TerrainGeneration
 					if (chunk.SubChunks is null)
 					{ chunk.MakeSubChunks(this); }
 
+					int subChunkFinishedCount = 0;
+
 					for (int i = 0; i < SUB_CHUNK_FACTOR; i++)
 					{
 						for (int j = 0; j < SUB_CHUNK_FACTOR; j++)
 						{
-							if (!chunk.SubChunks[i, j].ShouldHaveMesh)
+							if (chunk.SubChunks[i, j].HasMesh)
+							{
+								subChunkFinishedCount++;
+							}
+							else if (!chunk.SubChunks[i, j].ShouldHaveMesh)
 							{
 								ChunkCoords subCoords = new ChunkCoords(coords.x * SUB_CHUNK_FACTOR + i, coords.z * SUB_CHUNK_FACTOR + j);
 
 								chunk.SubChunks[i, j].ShouldHaveMesh = true;
-								chunkMeshGenQueue.AddLast((subCoords, 1, chunk.SubChunks[i, j]));
+								chunkMeshGenQueue.AddLast((subCoords, lod + 1, chunk.SubChunks[i, j]));
 							}
-
-							if (chunk.SubChunks[i, j].HasMesh)
-							{ chunk.SubChunkFinishedCount++; }
 						}
 					}
+
+					if (subChunkFinishedCount >= SUB_CHUNK_FACTOR * SUB_CHUNK_FACTOR)
+					{ chunk.FinishedAllSubChunks = true; }
 				}
 			}
-			else if (chunk.SubChunks is not null && chunk.SubChunkFinishedCount >= SUB_CHUNK_FACTOR * SUB_CHUNK_FACTOR)
+			else if (chunk.SubChunks is not null && chunk.FinishedAllSubChunks)
 			{
 				for (int i = 0; i < SUB_CHUNK_FACTOR; i++)
 				{
 					for (int j = 0; j < SUB_CHUNK_FACTOR; j++)
 					{
 						chunk.SubChunks[i, j].SetObjActive(false);
+
+						ChunkCoords subCoords = new ChunkCoords(coords.x * SUB_CHUNK_FACTOR + i, coords.z * SUB_CHUNK_FACTOR + j);
+						UpdateSubChunksRecursively(lod + 1, subCoords, chunk.SubChunks[i, j]);
 					}
 				}
 			}
@@ -296,7 +308,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 			private Chunk[,] _subChunks;
 			public Chunk[,] SubChunks { get => _subChunks; }
-			public int SubChunkFinishedCount { get; set; }
+			public bool FinishedAllSubChunks { get; set; }
 
 			public Chunk(TerrainManager terrainManager)
 			{
@@ -305,7 +317,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 				HasMesh = false;
 				GameObj = new GameObject("ScriptGeneratedChunk");
 				_subChunks = null;
-				SubChunkFinishedCount = 0;
+				FinishedAllSubChunks = false;
 
 				GameObj.transform.SetParent(terrainManager.originTran);
 				GameObj.transform.localPosition = Vector3.zero;
