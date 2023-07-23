@@ -151,18 +151,18 @@ namespace UnityTerrainGeneration.TerrainGeneration
 					{
 						if (!llnode.Value.chunk.HasMesh)
 						{
-							chunkMeshGenQueue.AddLast((llnode.Value.coords, 0, llnode.Value.chunk));
+							if (!llnode.Value.chunk.ShouldHaveMesh)
+							{
+								llnode.Value.chunk.ShouldHaveMesh = true;
+								chunkMeshGenQueue.AddLast((llnode.Value.coords, 0, llnode.Value.chunk));
+							}
 						}
 						else
 						{
 							llnode.Value.chunk.SetObjActive(true);
-
-							if (IsWithinHalfRenderDist(0, llnode.Value.coords))
-							{
-								// DEBUG:
-								// llnode.Value.chunk.GameObj.transform.position += new Vector3(0f, 10f, 0f);
-							}
 						}
+
+						UpdateSubChunksRecursively(0, llnode.Value.coords, llnode.Value.chunk);
 
 						activeChunkQueue.AddLast(llnode);
 					}
@@ -170,10 +170,66 @@ namespace UnityTerrainGeneration.TerrainGeneration
 					{
 						llnode.Value.chunk.ShouldBeActive = false;
 						llnode.Value.chunk.SetObjActive(false);
+
+						UpdateSubChunksRecursively(0, llnode.Value.coords, llnode.Value.chunk);
 					}
 				}
 
 				yield return null;
+			}
+		}
+
+		private void UpdateSubChunksRecursively(int lod, ChunkCoords coords, Chunk chunk)
+		{
+			if (lod >= NUM_LODS)
+			{ return; }
+
+			if (IsWithinHalfRenderDist(lod, coords))
+			{
+				if (chunk.SubChunkFinishedCount >= SUB_CHUNK_FACTOR * SUB_CHUNK_FACTOR)
+				{
+					for (int i = 0; i < SUB_CHUNK_FACTOR; i++)
+					{
+						for (int j = 0; j < SUB_CHUNK_FACTOR; j++)
+						{
+							chunk.SubChunks[i, j].SetObjActive(true);
+						}
+					}
+
+					chunk.SetObjActive(false);
+				}
+				else
+				{
+					if (chunk.SubChunks is null)
+					{ chunk.MakeSubChunks(this); }
+
+					for (int i = 0; i < SUB_CHUNK_FACTOR; i++)
+					{
+						for (int j = 0; j < SUB_CHUNK_FACTOR; j++)
+						{
+							if (!chunk.SubChunks[i, j].ShouldHaveMesh)
+							{
+								ChunkCoords subCoords = new ChunkCoords(coords.x * SUB_CHUNK_FACTOR + i, coords.z * SUB_CHUNK_FACTOR + j);
+
+								chunk.SubChunks[i, j].ShouldHaveMesh = true;
+								chunkMeshGenQueue.AddLast((subCoords, 1, chunk.SubChunks[i, j]));
+							}
+
+							if (chunk.SubChunks[i, j].HasMesh)
+							{ chunk.SubChunkFinishedCount++; }
+						}
+					}
+				}
+			}
+			else if (chunk.SubChunks is not null && chunk.SubChunkFinishedCount >= SUB_CHUNK_FACTOR * SUB_CHUNK_FACTOR)
+			{
+				for (int i = 0; i < SUB_CHUNK_FACTOR; i++)
+				{
+					for (int j = 0; j < SUB_CHUNK_FACTOR; j++)
+					{
+						chunk.SubChunks[i, j].SetObjActive(false);
+					}
+				}
 			}
 		}
 
@@ -189,7 +245,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 					if (true)
 					{
 						if (llnode.Value.chunk.HasMesh)
-						{ Debug.LogWarning("The chunkMeshGenQueue got to a chunk that already had a mesh."); }
+						{ Debug.LogWarning($"The chunkMeshGenQueue got to a chunk that already had a mesh (the lod is {llnode.Value.lod})."); }
 
 						llnode.Value.chunk.GenerateMesh(this, PARTIAL_CHUNK_SCALES[llnode.Value.lod], llnode.Value.coords.x, llnode.Value.coords.z);
 					}
@@ -234,18 +290,22 @@ namespace UnityTerrainGeneration.TerrainGeneration
 		private sealed class Chunk
 		{
 			public bool ShouldBeActive { get; set; }
+			public bool ShouldHaveMesh { get; set; }
 			public bool HasMesh { get; private set; }
 			public GameObject GameObj { get; }
 
 			private Chunk[,] _subChunks;
 			public Chunk[,] SubChunks { get => _subChunks; }
+			public int SubChunkFinishedCount { get; set; }
 
 			public Chunk(TerrainManager terrainManager)
 			{
 				ShouldBeActive = false;
+				ShouldHaveMesh = false;
 				HasMesh = false;
 				GameObj = new GameObject("ScriptGeneratedChunk");
 				_subChunks = null;
+				SubChunkFinishedCount = 0;
 
 				GameObj.transform.SetParent(terrainManager.originTran);
 				GameObj.transform.localPosition = Vector3.zero;
@@ -258,6 +318,9 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 			public void GenerateMesh(TerrainManager terrainManager, float chunkScale, long offX, long offZ)
 			{
+				if (HasMesh)
+				{ Debug.LogWarning("Generating the mesh for a chunk that already has a mesh."); }
+
 				Mesh mesh = ChunkMeshGenerator.MakeMesh(terrainManager.terrainGene, CHUNK_MESH_SIZE, chunkScale, offX, offZ, LodTransitions.None);
 
 				GameObj.GetComponent<MeshFilter>().mesh = mesh;
