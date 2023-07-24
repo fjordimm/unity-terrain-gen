@@ -209,7 +209,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 								while (lodI < NUM_LODS)
 								{
 									Chunk chunkI;
-									coordsI = new ChunkCoords(coordsI.x / 2, coordsI.z / 2);
+									coordsI = ToSuperCoords(coordsI);
 									bool alreadyExists = chunkDicts[lodI].TryGetValue(coordsI, out chunkI);
 
 									if (alreadyExists && chunkI.IsObjActive())
@@ -403,7 +403,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 				if (lod < NUM_LODS - 1)
 				{
 					Chunk superChunk;
-					ChunkCoords superCoords = new ChunkCoords(coords.x / 2, coords.z / 2);
+					ChunkCoords superCoords = ToSuperCoords(coords);
 					bool alreadyExists = terrainManager.chunkDicts[lod + 1].TryGetValue(superCoords, out superChunk);
 
 					if (!alreadyExists)
