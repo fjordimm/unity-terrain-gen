@@ -200,6 +200,37 @@ namespace UnityTerrainGeneration.TerrainGeneration
 								llnode.Value.chunk.SetObjActive(true);
 								liveChunkQueues[lod].AddLast(llnode);
 							}
+							else if (!withinLodGap && withinReasonableDist && lod < NUM_LODS - 1)
+							{
+								bool thereIsAnActiveSuperChunk = false;
+
+								ChunkCoords coordsI = llnode.Value.coords;
+								int lodI = lod + 1;
+								while (lodI < NUM_LODS)
+								{
+									Chunk chunkI;
+									coordsI = new ChunkCoords(coordsI.x / 2, coordsI.z / 2);
+									bool alreadyExists = chunkDicts[lodI].TryGetValue(coordsI, out chunkI);
+
+									if (alreadyExists && chunkI.IsObjActive())
+									{
+										thereIsAnActiveSuperChunk = true;
+										break;
+									}
+
+									lodI++;
+								}
+
+								if (!thereIsAnActiveSuperChunk)
+								{
+									liveChunkQueues[lod].AddLast(llnode);
+								}
+								else
+								{
+									llnode.Value.chunk.SetObjActive(false);
+									llnode.Value.chunk.InLiveQueue = false;
+								}
+							}
 							else
 							{
 								llnode.Value.chunk.SetObjActive(false);
@@ -369,7 +400,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 			public void UpdateSuperChunk(TerrainManager terrainManager, int lod, ChunkCoords coords, bool polarity)
 			{
-				if (lod != NUM_LODS - 1)
+				if (lod < NUM_LODS - 1)
 				{
 					Chunk superChunk;
 					ChunkCoords superCoords = new ChunkCoords(coords.x / 2, coords.z / 2);
@@ -446,6 +477,13 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			float outZ = coords.z * CHUNK_SCALES[lod];
 
 			return (outX, outZ);
+		}
+
+		private static ChunkCoords ToSuperCoords(ChunkCoords coords)
+		{
+			long x = coords.x >= 0 ? coords.x / 2 : (coords.x - 1) / 2;
+			long z = coords.z >= 0 ? coords.z / 2 : (coords.z - 1) / 2;
+			return new ChunkCoords(x, z);
 		}
 	}
 }
