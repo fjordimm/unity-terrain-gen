@@ -101,9 +101,9 @@ namespace UnityTerrainGeneration.TerrainGeneration
 							chunkDicts[lod].Add(currentSpiralCoords, chunk);
 						}
 
-						if (!chunk.HasBeenEncountered)
+						if (!chunk.InLiveQueue)
 						{
-							chunk.HasBeenEncountered = true;
+							chunk.InLiveQueue = true;
 							liveChunkQueues[lod].AddLast((currentSpiralCoords, chunk));
 						}
 					}
@@ -158,24 +158,27 @@ namespace UnityTerrainGeneration.TerrainGeneration
 					liveChunkQueues[lod].RemoveFirst();
 
 					bool withinRendDist;
-					bool withinHalfRendDist;
+					bool withinLodGap;
 					bool withinReasonableDist;
-					TestWithinRendDist(lod, llnode.Value.coords, out withinRendDist, out withinHalfRendDist, out withinReasonableDist);
+					TestWithinRendDist(lod, llnode.Value.coords, out withinRendDist, out withinLodGap, out withinReasonableDist);
 
-					if (!llnode.Value.chunk.HasBeenQueuedForMeshGen && withinRendDist)
+					if (!llnode.Value.chunk.HasMesh && !llnode.Value.chunk.InMeshGenQueue && withinRendDist)
 					{
-						llnode.Value.chunk.HasBeenQueuedForMeshGen = true;
+						llnode.Value.chunk.InMeshGenQueue = true;
 						meshGenQueues[lod].AddLast((llnode.Value.coords, llnode.Value.chunk));
+					}
+
+					if (withinRendDist && !withinLodGap)
+					{
+						if (llnode.Value.chunk.HasMesh)
+						{ llnode.Value.chunk.SetObjActive(true); }
 
 						liveChunkQueues[lod].AddLast(llnode);
 					}
-					else if (llnode.Value.chunk.HasMesh)
+					else
 					{
-						if (withinRendDist && !withinHalfRendDist)
-						{
-							llnode.Value.chunk.SetObjActive(true);
-							liveChunkQueues[lod].AddLast(llnode);
-						}
+						llnode.Value.chunk.SetObjActive(false);
+						llnode.Value.chunk.InLiveQueue = false;
 					}
 				}
 
@@ -192,12 +195,13 @@ namespace UnityTerrainGeneration.TerrainGeneration
 					var llnode = meshGenQueues[lod].First;
 					meshGenQueues[lod].RemoveFirst();
 
-					if (true)
+					if (true) // Possibly later update this so it only generates the mesh if it is within render dist
 					{
 						if (llnode.Value.chunk.HasMesh)
 						{ Debug.LogWarning($"The meshGenQueue got to a chunk that already had a mesh."); }
 
 						llnode.Value.chunk.GenerateMesh(this, PARTIAL_CHUNK_SCALES[lod], llnode.Value.coords.x, llnode.Value.coords.z);
+						llnode.Value.chunk.InMeshGenQueue = false;
 					}
 				}
 
@@ -205,7 +209,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			}
 		}
 
-		private void TestWithinRendDist(int lod, ChunkCoords coords, out bool withinRendDist, out bool withinHalfRendDist, out bool withinReasonableDist)
+		private void TestWithinRendDist(int lod, ChunkCoords coords, out bool withinRendDist, out bool withinLodGap, out bool withinReasonableDist)
 		{
 			if (lod == NUM_LODS - 1)
 			{
@@ -221,7 +225,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 				long dist = Math.Max(xDiff, zDiff);
 
 				withinRendDist = dist <= CHUNK_RENDER_DIST;
-				withinHalfRendDist = dist <= CHUNK_RENDER_DIST / 2;
+				withinLodGap = dist <= CHUNK_RENDER_DIST / 2;
 				withinReasonableDist = dist <= CHUNK_RENDER_DIST * 2;
 			}
 			else if (lod == 0)
@@ -243,7 +247,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 				long distR = Math.Max(xDiffR, zDiffR);
 
 				withinRendDist = distR <= CHUNK_RENDER_DIST;
-				withinHalfRendDist = false;
+				withinLodGap = false;
 				withinReasonableDist = distR <= CHUNK_RENDER_DIST * 2;
 			}
 			else
@@ -269,22 +273,22 @@ namespace UnityTerrainGeneration.TerrainGeneration
 				long distR = Math.Max(xDiffR, zDiffR);
 
 				withinRendDist = distR <= CHUNK_RENDER_DIST;
-				withinHalfRendDist = dist <= CHUNK_RENDER_DIST / 2;
+				withinLodGap = dist <= CHUNK_RENDER_DIST / 2;
 				withinReasonableDist = dist <= CHUNK_RENDER_DIST * 2;
 			}
 		}
 
 		private sealed class Chunk
 		{
-			public bool HasBeenEncountered { get; set; }
-			public bool HasBeenQueuedForMeshGen { get; set; }
+			public bool InLiveQueue { get; set; }
+			public bool InMeshGenQueue { get; set; }
 			public bool HasMesh { get; private set; }
 			public GameObject GameObj { get; }
 
 			public Chunk(TerrainManager terrainManager)
 			{
-				HasBeenEncountered = false;
-				HasBeenQueuedForMeshGen = false;
+				InLiveQueue = false;
+				InMeshGenQueue = false;
 				HasMesh = false;
 				GameObj = new GameObject("ScriptGeneratedChunk");
 
