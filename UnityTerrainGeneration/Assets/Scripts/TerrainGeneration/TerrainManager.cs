@@ -168,17 +168,50 @@ namespace UnityTerrainGeneration.TerrainGeneration
 						meshGenQueues[lod].AddLast((llnode.Value.coords, llnode.Value.chunk));
 					}
 
-					if (withinRendDist && !withinLodGap)
+					if (!llnode.Value.chunk.HasMesh)
 					{
-						if (llnode.Value.chunk.HasMesh)
-						{ llnode.Value.chunk.SetObjActive(true); }
-
-						liveChunkQueues[lod].AddLast(llnode);
+						if (withinRendDist && !withinLodGap)
+						{
+							liveChunkQueues[lod].AddLast(llnode);
+						}
+						else
+						{
+							llnode.Value.chunk.InLiveQueue = false;
+						}
 					}
 					else
 					{
-						llnode.Value.chunk.SetObjActive(false);
-						llnode.Value.chunk.InLiveQueue = false;
+						Chunk superChunk = null;
+						if (lod != NUM_LODS - 1)
+						{
+							ChunkCoords macCoords = new ChunkCoords(llnode.Value.coords.x / 2, llnode.Value.coords.z / 2);
+							chunkDicts[lod + 1].TryGetValue(macCoords, out superChunk);
+						}
+
+						if (withinRendDist && !withinLodGap)
+						{
+							if (superChunk is not null && !llnode.Value.chunk.IsObjActive())
+							{ superChunk.SubChunksActiveCount++; }
+
+							llnode.Value.chunk.SetObjActive(true);
+							liveChunkQueues[lod].AddLast(llnode);
+						}
+						else
+						{
+							if (superChunk is not null && llnode.Value.chunk.IsObjActive())
+							{ superChunk.SubChunksActiveCount--; }
+
+							if (withinLodGap && llnode.Value.chunk.SubChunksActiveCount < 4)
+							{
+								llnode.Value.chunk.SetObjActive(true);
+								liveChunkQueues[lod].AddLast(llnode);
+							}
+							else
+							{
+								llnode.Value.chunk.SetObjActive(false);
+								llnode.Value.chunk.InLiveQueue = false;
+							}
+						}
 					}
 				}
 
@@ -283,6 +316,9 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			public bool InLiveQueue { get; set; }
 			public bool InMeshGenQueue { get; set; }
 			public bool HasMesh { get; private set; }
+			public sbyte SubChunksActiveCount { get; set; }
+
+			// only public for debugging. change back to private
 			public GameObject GameObj { get; }
 
 			public Chunk(TerrainManager terrainManager)
@@ -291,6 +327,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 				InMeshGenQueue = false;
 				HasMesh = false;
 				GameObj = new GameObject("ScriptGeneratedChunk");
+				SubChunksActiveCount = 0;
 
 				GameObj.transform.SetParent(terrainManager.originTran);
 				GameObj.transform.localPosition = Vector3.zero;
@@ -320,6 +357,11 @@ namespace UnityTerrainGeneration.TerrainGeneration
 				{ Debug.LogWarning("Setting chunk active while it has no mesh."); }
 
 				GameObj.SetActive(active);
+			}
+
+			public bool IsObjActive()
+			{
+				return GameObj.activeSelf;
 			}
 		}
 
