@@ -12,12 +12,12 @@ namespace UnityTerrainGeneration.TerrainGeneration
 	internal class TerrainManager
 	{
 		private const int CHUNK_MESH_SIZE = 32;
-		private const int NUM_LODS = 5;
+		private const int NUM_LODS = 4;
 		private const float LOD0_PARTIAL_CHUNK_SCALE = 0.5f; // The width of one triangle for the lowest LOD chunk
 		private static readonly float[] PARTIAL_CHUNK_SCALES = new float[NUM_LODS]; // The width of one triangle for each LOD
 		private static readonly float[] CHUNK_SCALES = new float[NUM_LODS]; // The scale of a chunk for each LOD
 
-		private const long CHUNK_RENDER_DIST = 5;
+		private const long CHUNK_RENDER_DIST = 3;
 
 		private readonly MonoBehaviour controller;
 		private readonly Transform originTran;
@@ -158,24 +158,62 @@ namespace UnityTerrainGeneration.TerrainGeneration
 					var llnode = liveChunkQueues[lod].First;
 					liveChunkQueues[lod].RemoveFirst();
 
+					ChunkCoords llnCoords = llnode.Value.coords;
+					Chunk llnChunk = llnode.Value.chunk;
+
+					if (llnChunk.NumSubChunksPseudolyActive > 4)
+					{ Debug.LogWarning("The value of NumSubChunksPseudolyActive for a chunk is greater than 4."); }
+
 					bool withinRendDist;
 					bool withinLodGap;
 					bool withinReasonableDist;
-					TestWithinRendDist(lod, llnode.Value.coords, out withinRendDist, out withinLodGap, out withinReasonableDist);
+					TestWithinRendDist(lod, llnCoords, out withinRendDist, out withinLodGap, out withinReasonableDist);
 
-					if (!llnode.Value.chunk.HasMesh && !llnode.Value.chunk.InMeshGenQueue && withinRendDist)
+					if (!llnChunk.HasMesh && !llnChunk.InMeshGenQueue && withinRendDist)
 					{
-						llnode.Value.chunk.InMeshGenQueue = true;
-						meshGenQueues[lod].AddLast((llnode.Value.coords, llnode.Value.chunk));
+						llnChunk.InMeshGenQueue = true;
+						meshGenQueues[lod].AddLast((llnCoords, llnChunk));
 					}
 
-					bool chunkWasActive = llnode.Value.chunk.IsObjActive();
-					bool chunkIsPseudolyActive = llnode.Value.chunk.NumSubChunksPseudolyActive == 4;
-					
-					if (llnode.Value.chunk.NumSubChunksPseudolyActive > 4)
-					{ Debug.LogWarning("The value of NumSubChunksPseudolyActive for a chunk is greater than 4."); }
+					bool tryGoingActive = false;
+					if (withinRendDist && !withinLodGap)
+					{
+						tryGoingActive = true;
+					}
+					else if (withinLodGap && llnChunk.NumSubChunksPseudolyActive < 4)
+					{
+						tryGoingActive = true;
+					}
+					// TODO: another else if here for if withinReasonableDist and there isn't an active superchunk
 
-					if (!llnode.Value.chunk.HasMesh)
+					bool goingActive = false;
+					if (tryGoingActive)
+					{
+						if (llnChunk.HasMesh)
+						{ goingActive = true; }
+
+						liveChunkQueues[lod].AddLast(llnode);
+					}
+					else
+					{
+						llnChunk.InLiveQueue = false;
+					}
+
+					bool chunkWasActive = llnChunk.IsObjActive();
+					bool chunkWasPseudolyActive = llnChunk.NumSubChunksPseudolyActive == 4;
+					if (goingActive && !(chunkWasActive || chunkWasPseudolyActive))
+					{
+						llnChunk.UpdateSuperChunk(this, lod, llnCoords, true);
+					}
+					else if (!chunkWasPseudolyActive && !goingActive && chunkWasActive)
+					{
+						llnChunk.UpdateSuperChunk(this, lod, llnCoords, false);
+					}
+
+					llnChunk.SetObjActive(goingActive);
+
+					/*
+					if (!llnChunk.HasMesh)
 					{
 						if (withinRendDist && !withinLodGap)
 						{
@@ -237,16 +275,20 @@ namespace UnityTerrainGeneration.TerrainGeneration
 								llnode.Value.chunk.InLiveQueue = false;
 							}
 						}
-					}
+						
+						// TODO: update all super chunks not just the immediate one
 
-					if (llnode.Value.chunk.IsObjActive() && !(chunkWasActive || chunkIsPseudolyActive))
-					{
-						llnode.Value.chunk.UpdateSuperChunk(this, lod, llnode.Value.coords, true);
-					}
-					else if (!chunkIsPseudolyActive && !llnode.Value.chunk.IsObjActive() && chunkWasActive)
-					{
-						llnode.Value.chunk.UpdateSuperChunk(this, lod, llnode.Value.coords, false);
-					}
+						// TODO: don't actually check if the object is active, just use the bool goingActive
+						if (llnode.Value.chunk.IsObjActive() && !(chunkWasActive || chunkIsPseudolyActive))
+						{
+							llnode.Value.chunk.UpdateSuperChunk(this, lod, llnode.Value.coords, true);
+						}
+						else if (!chunkIsPseudolyActive && !llnode.Value.chunk.IsObjActive() && chunkWasActive)
+						{
+							llnode.Value.chunk.UpdateSuperChunk(this, lod, llnode.Value.coords, false);
+						}
+					}	
+					*/
 				}
 
 				yield return null;
@@ -400,32 +442,32 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 			public void UpdateSuperChunk(TerrainManager terrainManager, int lod, ChunkCoords coords, bool polarity)
 			{
-				if (lod < NUM_LODS - 1)
+				if (lod >= NUM_LODS - 1)
+				{ return; }
+
+				Chunk superChunk;
+				ChunkCoords superCoords = ToSuperCoords(coords);
+				bool alreadyExists = terrainManager.chunkDicts[lod + 1].TryGetValue(superCoords, out superChunk);
+
+				if (!alreadyExists)
 				{
-					Chunk superChunk;
-					ChunkCoords superCoords = ToSuperCoords(coords);
-					bool alreadyExists = terrainManager.chunkDicts[lod + 1].TryGetValue(superCoords, out superChunk);
+					superChunk = new Chunk(terrainManager);
+					terrainManager.chunkDicts[lod].Add(superCoords, superChunk);
+				}
 
-					if (!alreadyExists)
-					{
-						superChunk = new Chunk(terrainManager);
-						terrainManager.chunkDicts[lod].Add(superCoords, superChunk);
-					}
+				if (polarity)
+				{
+					if (superChunk.NumSubChunksPseudolyActive == 3 && !superChunk.IsObjActive())
+					{ UpdateSuperChunk(terrainManager, lod + 1, superCoords, true); }
 
-					if (polarity)
-					{
-						if (superChunk.NumSubChunksPseudolyActive == 3 && !superChunk.IsObjActive())
-						{ UpdateSuperChunk(terrainManager, lod + 1, superCoords, true); }
+					superChunk.NumSubChunksPseudolyActive++;
+				}
+				else
+				{
+					if (superChunk.NumSubChunksPseudolyActive == 4 && !superChunk.IsObjActive())
+					{ UpdateSuperChunk(terrainManager, lod + 1, superCoords, false); }
 
-						superChunk.NumSubChunksPseudolyActive++;
-					}
-					else
-					{
-						if (superChunk.NumSubChunksPseudolyActive == 4 && !superChunk.IsObjActive())
-						{ UpdateSuperChunk(terrainManager, lod + 1, superCoords, false); }
-
-						superChunk.NumSubChunksPseudolyActive--;
-					}
+					superChunk.NumSubChunksPseudolyActive--;
 				}
 			}
 		}
