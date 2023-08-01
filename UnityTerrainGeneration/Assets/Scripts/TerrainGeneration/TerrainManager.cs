@@ -1,4 +1,11 @@
-﻿using Unity.VisualScripting;
+﻿
+/*
+
+Note: It will be laggy at first, but over time it gets better
+
+*/
+
+using Unity.VisualScripting;
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
@@ -7,17 +14,19 @@ using UnityEditor.Experimental.GraphView;
 using UnityEngine.AI;
 using UnityEngine.Assertions;
 
+// TODO: make the lower LODs render in front of higher ones using the shader to make it look better when LODs overlap
+
 namespace UnityTerrainGeneration.TerrainGeneration
 {
 	internal class TerrainManager
 	{
 		private const int CHUNK_MESH_SIZE = 32;
 		private const int NUM_LODS = 13;
-		private const float LOD0_PARTIAL_CHUNK_SCALE = 0.03125f; // The width of one triangle for the lowest LOD chunk
+		private const float LOD0_PARTIAL_CHUNK_SCALE = 0.06125f; // The width of one triangle for the lowest LOD chunk
 		private static readonly float[] PARTIAL_CHUNK_SCALES = new float[NUM_LODS]; // The width of one triangle for each LOD
 		private static readonly float[] CHUNK_SCALES = new float[NUM_LODS]; // The scale of a chunk for each LOD
 
-		private const long RELATIVE_CHUNK_RENDER_DIST = 5;
+		private const long RELATIVE_CHUNK_RENDER_DIST = 7;
 		private static readonly float[] ADJUSTED_CHUNK_RENDER_DISTS = new float[NUM_LODS];
 
 		private readonly MonoBehaviour controller;
