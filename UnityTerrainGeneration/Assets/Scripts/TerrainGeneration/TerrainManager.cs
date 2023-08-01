@@ -12,12 +12,12 @@ namespace UnityTerrainGeneration.TerrainGeneration
 	internal class TerrainManager
 	{
 		private const int CHUNK_MESH_SIZE = 32;
-		private const int NUM_LODS = 4;
+		private const int NUM_LODS = 7;
 		private const float LOD0_PARTIAL_CHUNK_SCALE = 0.5f; // The width of one triangle for the lowest LOD chunk
 		private static readonly float[] PARTIAL_CHUNK_SCALES = new float[NUM_LODS]; // The width of one triangle for each LOD
 		private static readonly float[] CHUNK_SCALES = new float[NUM_LODS]; // The scale of a chunk for each LOD
 
-		private const long CHUNK_RENDER_DIST = 3;
+		private const long CHUNK_RENDER_DIST = 5;
 
 		private readonly MonoBehaviour controller;
 		private readonly Transform originTran;
@@ -184,8 +184,33 @@ namespace UnityTerrainGeneration.TerrainGeneration
 					{
 						tryGoingActive = true;
 					}
-					// TODO: another else if here for if withinReasonableDist and there isn't an active superchunk
+					else if (!withinLodGap && withinReasonableDist && lod < NUM_LODS - 1)
+					{
+						bool thereIsAnActiveSuperChunk = false;
 
+						ChunkCoords coordsI = llnCoords;
+						int lodI = lod + 1;
+						while (lodI < NUM_LODS)
+						{
+							Chunk chunkI;
+							coordsI = ToSuperCoords(coordsI);
+							bool alreadyExists = chunkDicts[lodI].TryGetValue(coordsI, out chunkI);
+
+							if (alreadyExists && chunkI.IsObjActive())
+							{
+								thereIsAnActiveSuperChunk = true;
+								break;
+							}
+
+							lodI++;
+						}
+
+						if (!thereIsAnActiveSuperChunk)
+						{
+							tryGoingActive = true;
+						}
+					}
+					
 					bool goingActive = false;
 					if (tryGoingActive)
 					{
@@ -335,7 +360,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 				withinRendDist = dist <= CHUNK_RENDER_DIST;
 				withinLodGap = dist <= CHUNK_RENDER_DIST / 2;
-				withinReasonableDist = dist <= CHUNK_RENDER_DIST * 2;
+				withinReasonableDist = dist <= CHUNK_RENDER_DIST * 4;
 			}
 			else if (lod == 0)
 			{
@@ -357,7 +382,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 				withinRendDist = distR <= CHUNK_RENDER_DIST;
 				withinLodGap = false;
-				withinReasonableDist = distR <= CHUNK_RENDER_DIST * 2;
+				withinReasonableDist = distR <= CHUNK_RENDER_DIST * 4;
 			}
 			else
 			{
@@ -383,7 +408,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 				withinRendDist = distR <= CHUNK_RENDER_DIST;
 				withinLodGap = dist <= CHUNK_RENDER_DIST / 2;
-				withinReasonableDist = dist <= CHUNK_RENDER_DIST * 2;
+				withinReasonableDist = dist <= CHUNK_RENDER_DIST * 4;
 			}
 		}
 
@@ -458,14 +483,18 @@ namespace UnityTerrainGeneration.TerrainGeneration
 				if (polarity)
 				{
 					if (superChunk.NumSubChunksPseudolyActive == 3 && !superChunk.IsObjActive())
-					{ UpdateSuperChunk(terrainManager, lod + 1, superCoords, true); }
+					{
+						UpdateSuperChunk(terrainManager, lod + 1, superCoords, true);
+					}
 
 					superChunk.NumSubChunksPseudolyActive++;
 				}
 				else
 				{
 					if (superChunk.NumSubChunksPseudolyActive == 4 && !superChunk.IsObjActive())
-					{ UpdateSuperChunk(terrainManager, lod + 1, superCoords, false); }
+					{
+						UpdateSuperChunk(terrainManager, lod + 1, superCoords, false);
+					}
 
 					superChunk.NumSubChunksPseudolyActive--;
 				}
