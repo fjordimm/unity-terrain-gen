@@ -15,6 +15,7 @@ using UnityEngine.AI;
 using UnityEngine.Assertions;
 
 // TODO: make the lower LODs render in front of higher ones using the shader to make it look better when LODs overlap
+// ^ or actually maybe the opposite
 
 namespace UnityTerrainGeneration.TerrainGeneration
 {
