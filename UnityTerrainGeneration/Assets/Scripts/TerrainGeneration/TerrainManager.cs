@@ -12,12 +12,13 @@ namespace UnityTerrainGeneration.TerrainGeneration
 	internal class TerrainManager
 	{
 		private const int CHUNK_MESH_SIZE = 32;
-		private const int NUM_LODS = 7;
-		private const float LOD0_PARTIAL_CHUNK_SCALE = 0.5f; // The width of one triangle for the lowest LOD chunk
+		private const int NUM_LODS = 13;
+		private const float LOD0_PARTIAL_CHUNK_SCALE = 0.03125f; // The width of one triangle for the lowest LOD chunk
 		private static readonly float[] PARTIAL_CHUNK_SCALES = new float[NUM_LODS]; // The width of one triangle for each LOD
 		private static readonly float[] CHUNK_SCALES = new float[NUM_LODS]; // The scale of a chunk for each LOD
 
-		private const long CHUNK_RENDER_DIST = 5;
+		private const long RELATIVE_CHUNK_RENDER_DIST = 5;
+		private static readonly float[] ADJUSTED_CHUNK_RENDER_DISTS = new float[NUM_LODS];
 
 		private readonly MonoBehaviour controller;
 		private readonly Transform originTran;
@@ -37,6 +38,8 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			{
 				PARTIAL_CHUNK_SCALES[i] = LOD0_PARTIAL_CHUNK_SCALE * (float)(1 << i);
 				CHUNK_SCALES[i] = PARTIAL_CHUNK_SCALES[i] * CHUNK_MESH_SIZE;
+
+				ADJUSTED_CHUNK_RENDER_DISTS[i] = (float)(RELATIVE_CHUNK_RENDER_DIST * (1 << (NUM_LODS - 1 - i)));
 			}
 
 			controller = _controller;
@@ -77,7 +80,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			{
 				ChunkCoords goalCoords = ToChunkCoords(playerTran.position.x, playerTran.position.z, lod);
 
-				long spiralRenderDist = CHUNK_RENDER_DIST + 1;
+				long spiralRenderDist = RELATIVE_CHUNK_RENDER_DIST + 1;
 
 				// Spirals out from the player's position
 				long cX = goalCoords.x;
@@ -358,9 +361,9 @@ namespace UnityTerrainGeneration.TerrainGeneration
 				long zDiff = pcoordZ - coordZ; if (zDiff < 0) { zDiff = -zDiff; }
 				long dist = Math.Max(xDiff, zDiff);
 
-				withinRendDist = dist <= CHUNK_RENDER_DIST;
-				withinLodGap = dist <= CHUNK_RENDER_DIST / 2;
-				withinReasonableDist = dist <= CHUNK_RENDER_DIST * 4;
+				withinRendDist = dist <= RELATIVE_CHUNK_RENDER_DIST;
+				withinLodGap = dist <= RELATIVE_CHUNK_RENDER_DIST / 2;
+				withinReasonableDist = dist <= ADJUSTED_CHUNK_RENDER_DISTS[lod];
 			}
 			else if (lod == 0)
 			{
@@ -380,9 +383,9 @@ namespace UnityTerrainGeneration.TerrainGeneration
 				long zDiffR = pcoordZr - coordZr; if (zDiffR < 0) { zDiffR = -zDiffR; }
 				long distR = Math.Max(xDiffR, zDiffR);
 
-				withinRendDist = distR <= CHUNK_RENDER_DIST;
+				withinRendDist = distR <= RELATIVE_CHUNK_RENDER_DIST;
 				withinLodGap = false;
-				withinReasonableDist = distR <= CHUNK_RENDER_DIST * 4;
+				withinReasonableDist = distR <= ADJUSTED_CHUNK_RENDER_DISTS[lod];
 			}
 			else
 			{
@@ -406,9 +409,9 @@ namespace UnityTerrainGeneration.TerrainGeneration
 				long zDiffR = pcoordZr - coordZr; if (zDiffR < 0) { zDiffR = -zDiffR; }
 				long distR = Math.Max(xDiffR, zDiffR);
 
-				withinRendDist = distR <= CHUNK_RENDER_DIST;
-				withinLodGap = dist <= CHUNK_RENDER_DIST / 2;
-				withinReasonableDist = dist <= CHUNK_RENDER_DIST * 4;
+				withinRendDist = distR <= RELATIVE_CHUNK_RENDER_DIST;
+				withinLodGap = dist <= RELATIVE_CHUNK_RENDER_DIST / 2;
+				withinReasonableDist = dist <= ADJUSTED_CHUNK_RENDER_DISTS[lod];
 			}
 		}
 
