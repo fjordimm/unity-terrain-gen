@@ -5,17 +5,14 @@ namespace UnityTerrainGeneration.Controllers
 {
 	public class TerrainOriginController : MonoBehaviour
 	{
-		[SerializeField]
-		private Transform PlayerTran;
-
-		[SerializeField]
-		private Material TerrainMat;
+		[SerializeField] private Transform PlayerTran;
+		[SerializeField] private Material TerrainMat;
 
 		private const int SEED = 0;
 
 		private TerrainManager terrainManager;
 
-		void Start()
+		private void Start()
 		{
 			terrainManager = new TerrainManager(this, this.transform, PlayerTran, TerrainMat, SEED);
 			terrainManager.BeginGeneration();

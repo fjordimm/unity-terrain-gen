@@ -249,84 +249,6 @@ namespace UnityTerrainGeneration.TerrainGeneration
 					}
 
 					llnChunk.SetObjActive(goingActive);
-
-					/*
-					if (!llnChunk.HasMesh)
-					{
-						if (withinRendDist && !withinLodGap)
-						{
-							liveChunkQueues[lod].AddLast(llnode);
-						}
-						else
-						{
-							llnode.Value.chunk.InLiveQueue = false;
-						}
-					}
-					else
-					{
-						if (withinRendDist && !withinLodGap)
-						{
-							llnode.Value.chunk.SetObjActive(true);
-							liveChunkQueues[lod].AddLast(llnode);
-						}
-						else
-						{
-							if (withinLodGap && llnode.Value.chunk.NumSubChunksPseudolyActive < 4)
-							{
-								llnode.Value.chunk.SetObjActive(true);
-								liveChunkQueues[lod].AddLast(llnode);
-							}
-							else if (!withinLodGap && withinReasonableDist && lod < NUM_LODS - 1)
-							{
-								bool thereIsAnActiveSuperChunk = false;
-
-								ChunkCoords coordsI = llnode.Value.coords;
-								int lodI = lod + 1;
-								while (lodI < NUM_LODS)
-								{
-									Chunk chunkI;
-									coordsI = ToSuperCoords(coordsI);
-									bool alreadyExists = chunkDicts[lodI].TryGetValue(coordsI, out chunkI);
-
-									if (alreadyExists && chunkI.IsObjActive())
-									{
-										thereIsAnActiveSuperChunk = true;
-										break;
-									}
-
-									lodI++;
-								}
-
-								if (!thereIsAnActiveSuperChunk)
-								{
-									liveChunkQueues[lod].AddLast(llnode);
-								}
-								else
-								{
-									llnode.Value.chunk.SetObjActive(false);
-									llnode.Value.chunk.InLiveQueue = false;
-								}
-							}
-							else
-							{
-								llnode.Value.chunk.SetObjActive(false);
-								llnode.Value.chunk.InLiveQueue = false;
-							}
-						}
-						
-						// TODO: update all super chunks not just the immediate one
-
-						// TODO: don't actually check if the object is active, just use the bool goingActive
-						if (llnode.Value.chunk.IsObjActive() && !(chunkWasActive || chunkIsPseudolyActive))
-						{
-							llnode.Value.chunk.UpdateSuperChunk(this, lod, llnode.Value.coords, true);
-						}
-						else if (!chunkIsPseudolyActive && !llnode.Value.chunk.IsObjActive() && chunkWasActive)
-						{
-							llnode.Value.chunk.UpdateSuperChunk(this, lod, llnode.Value.coords, false);
-						}
-					}	
-					*/
 				}
 
 				yield return null;
@@ -432,8 +354,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			public bool HasMesh { get; private set; }
 			public sbyte NumSubChunksPseudolyActive { get; private set; }
 
-			// only public for debugging. change back to private
-			public GameObject GameObj { get; }
+			private GameObject GameObj { get; }
 
 			public Chunk(TerrainManager terrainManager)
 			{
@@ -445,6 +366,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 				GameObj.transform.SetParent(terrainManager.originTran);
 				GameObj.transform.localPosition = Vector3.zero;
+				GameObj.layer = terrainManager.originTran.gameObject.layer;
 				GameObj.AddComponent<MeshFilter>();
 				GameObj.AddComponent<MeshRenderer>();
 				GameObj.AddComponent<MeshCollider>();

@@ -9,7 +9,7 @@ public class TestBlobController : MonoBehaviour
 	[SerializeField]
 	private Material TestBlobMat;
 
-	void Start()
+	private void Start()
     {
         Vector3[] vertices =
 		{
@@ -47,9 +47,4 @@ public class TestBlobController : MonoBehaviour
 		this.GetComponent<MeshFilter>().mesh = mesh;
 		this.GetComponent<MeshCollider>().sharedMesh = mesh;
 	}
-
-    void Update()
-    {
-        
-    }
 }
