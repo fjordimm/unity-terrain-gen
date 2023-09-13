@@ -22,8 +22,8 @@ namespace UnityTerrainGeneration.TerrainGeneration
 	internal class TerrainManager
 	{
 		private const int CHUNK_MESH_SIZE = 32;
-		private const int NUM_LODS = 13;
-		private const float LOD0_PARTIAL_CHUNK_SCALE = 0.06125f; // The width of one triangle for the lowest LOD chunk
+		private const int NUM_LODS = 3;
+		private const float LOD0_PARTIAL_CHUNK_SCALE = 1f; // The width of one triangle for the lowest LOD chunk
 		private static readonly float[] PARTIAL_CHUNK_SCALES = new float[NUM_LODS]; // The width of one triangle for each LOD
 		private static readonly float[] CHUNK_SCALES = new float[NUM_LODS]; // The scale of a chunk for each LOD
 
@@ -111,7 +111,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 						}
 						else
 						{
-							chunk = new Chunk(this);
+							chunk = new Chunk(this, cX * CHUNK_SCALES[lod], cZ * CHUNK_SCALES[lod]);
 							chunkDicts[lod].Add(currentSpiralCoords, chunk);
 						}
 
@@ -356,7 +356,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 			private GameObject GameObj { get; }
 
-			public Chunk(TerrainManager terrainManager)
+			public Chunk(TerrainManager terrainManager, float xPos, float zPos)
 			{
 				InLiveQueue = false;
 				InMeshGenQueue = false;
@@ -365,12 +365,12 @@ namespace UnityTerrainGeneration.TerrainGeneration
 				NumSubChunksPseudolyActive = 0;
 
 				GameObj.transform.SetParent(terrainManager.originTran);
-				GameObj.transform.localPosition = Vector3.zero;
+				GameObj.transform.localPosition = new Vector3(xPos, 0f, zPos);
 				GameObj.layer = terrainManager.originTran.gameObject.layer;
 				GameObj.AddComponent<MeshFilter>();
 				GameObj.AddComponent<MeshRenderer>();
 				GameObj.AddComponent<MeshCollider>();
-				GameObj.GetComponent<Renderer>().material = terrainManager.terrainMat;
+				GameObj.GetComponent<MeshRenderer>().material = terrainManager.terrainMat;
 				GameObj.SetActive(false);
 			}
 
@@ -383,6 +383,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 				GameObj.GetComponent<MeshFilter>().mesh = mesh;
 				GameObj.GetComponent<MeshCollider>().sharedMesh = mesh;
+				GameObj.GetComponent<MeshRenderer>().material.mainTexture = ChunkMeshGenerator.MakeTexture(terrainManager.terrainGene, CHUNK_MESH_SIZE, chunkScale, offX, offZ, 1);
 
 				HasMesh = true;
 			}
@@ -411,7 +412,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 				if (!alreadyExists)
 				{
-					superChunk = new Chunk(terrainManager);
+					superChunk = new Chunk(terrainManager, superCoords.x * CHUNK_SCALES[lod], superCoords.z * CHUNK_SCALES[lod]);
 					terrainManager.chunkDicts[lod].Add(superCoords, superChunk);
 				}
 

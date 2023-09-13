@@ -65,7 +65,7 @@ namespace UnityTerrainGeneration.Controllers
 			{ playerRigidbody.drag = AirDrag; }
 
 			if (isOnGround)
-			{ playerRigidbody.AddForce(Vector3.up * direction.magnitude * Time.deltaTime * 500f, ForceMode.Force); }
+			{ playerRigidbody.AddForce(Vector3.up * direction.magnitude * Time.deltaTime * 5000f, ForceMode.Force); }
 		}
 	}
 }

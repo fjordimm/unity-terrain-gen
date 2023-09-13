@@ -52,20 +52,11 @@ namespace UnityTerrainGeneration.TerrainGeneration
 				{
 					for (int r = 0; r < zSize + 3; r++)
 					{
-						/*int cc = c;
-						int rr = r;
+						float xVal = chunkScale * (c - 1);
+						float zVal = chunkScale * (r - 1);
 
-						if (doLodTransition)
-						{
-							if ((c < 2 || c > xSize) && r % 2 == 0)
-							{ rr--; }
-
-							//if ((r < 2 || r > zSize) && c % 2 == 0)
-							//{ cc--; }
-						}*/
-
-						float xVal = chunkScale * (c - 1 + xSize * xOff);
-						float zVal = chunkScale * (r - 1 + xSize * zOff);
+						float xValOff = chunkScale * (c - 1 + xSize * xOff);
+						float zValOff = chunkScale * (r - 1 + xSize * zOff);
 
 						bool doZLodTran = (
 							(lodTransitions.HasFlag(LodTransitions.Left) && c < 2)
@@ -80,13 +71,13 @@ namespace UnityTerrainGeneration.TerrainGeneration
 						float yVal;
 						if (doZLodTran || doXLodTran)
 						{
-							float y1 = terrainGene.HeightAt(xVal - (doXLodTran ? chunkScale : 0f), zVal - (doZLodTran ? chunkScale : 0f));
-							float y2 = terrainGene.HeightAt(xVal + (doXLodTran ? chunkScale : 0f), zVal + (doZLodTran ? chunkScale : 0f));
+							float y1 = terrainGene.HeightAt(xValOff - (doXLodTran ? chunkScale : 0f), zValOff - (doZLodTran ? chunkScale : 0f));
+							float y2 = terrainGene.HeightAt(xValOff + (doXLodTran ? chunkScale : 0f), zValOff + (doZLodTran ? chunkScale : 0f));
 							yVal = (y1 + y2) / 2f;
 						}
 						else
 						{
-							yVal = terrainGene.HeightAt(xVal, zVal);
+							yVal = terrainGene.HeightAt(xValOff, zValOff);
 						}
 
 						verticesPre[c * (zSize + 3) + r] = new Vector3(xVal, yVal, zVal);
@@ -132,18 +123,30 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 			Vector3[] normals = MakeNormals(verticesPre, xSize, zSize);
 
+			Vector2[] uvs;
+			{
+				uvs = new Vector2[(xSize + 1) * (zSize + 1)];
+
+				for (int c = 0; c < xSize + 1; c++)
+				{
+					for (int r = 0; r < zSize + 1; r++)
+					{
+						uvs[c * (zSize + 1) + r] = new Vector2((c + 0.5f) / (float)(xSize + 1), (r + 0.5f) / (float)(zSize + 1));
+					}
+				}
+			}
+
+			/*
 			Color[] colors;
 			{
 				colors = new Color[(xSize + 1) * (zSize + 1)];
 
 				for (int i = 0; i < colors.Length; i++)
 				{
-					///*
 					float steepness = Vector3.Angle(Vector3.up, normals[i]) / 45f;
 					steepness = 1f / (1f + Mathf.Exp(-30f * (steepness - 0.9f)));
 					Color col = Color.Lerp(GREENGRASS, GRAYSTONE, steepness);
 					colors[i] = col;
-					//*/
 
 					// DEBUG:
 					// colors[i] = Color.Lerp(DEBUG_COLOR_RED, DEBUG_COLOR_BLUE, chunkScale / 32f);
@@ -151,13 +154,14 @@ namespace UnityTerrainGeneration.TerrainGeneration
 					// colors[i] = GREENGRASS;
 				}
 			}
+			*/
 
 			Mesh mesh = new();
 			{
 				mesh.name = "ScriptGeneratedMesh";
 				mesh.vertices = vertices;
 				mesh.triangles = triangles;
-				mesh.colors = colors;
+				mesh.uv = uvs;
 
 				mesh.normals = normals;
 				mesh.Optimize();
@@ -219,6 +223,83 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			}
 
 			return ret;
+		}
+	
+		public static Texture2D MakeTexture(TerrainGene terrainGene, int size, float chunkScale, long xOff, long zOff, int textureRescaler)
+		{
+			int xSize = size;
+			int zSize = size;
+
+			Color[] colors = new Color[(xSize + 1) * (zSize + 1)];
+			for (int c = 0; c < xSize + 1; c++)
+			{
+				for (int r = 0; r < zSize + 1; r++)
+				{
+					float xCoord = chunkScale * (c + xSize * xOff);
+					float zCoord = chunkScale * (r + xSize * zOff);
+
+					float height = terrainGene.HeightAt(xCoord, zCoord);
+					Color col = Color.Lerp(Color.black, Color.white, (height - 34f) / 606f);
+					
+					/*
+					if (c < 5)
+					{ col = Color.black; }
+					if (c == 0)
+					{ col = Color.red; }
+
+					if (c >= xSize + 1 - 5)
+					{ col = Color.black; }
+					if (c == xSize + 1 - 1)
+					{ col = Color.cyan; }
+
+					if (r < 5)
+					{ col = Color.black; }
+					if (r == 0)
+					{ col = Color.green; }
+
+					if (r >= zSize + 1 - 5)
+					{ col = Color.black; }
+					if (r == zSize + 1 - 1)
+					{ col = Color.blue; }
+					*/
+
+					/*
+					if (xOff % 2 == 0)
+					{
+						if (c < 5)
+						{ col = Color.black; }
+						if (c == 0)
+						{ col = Color.red; }
+
+						if (c >= xSize - 5)
+						{ col = Color.black; }
+						if (c == xSize - 1)
+						{ col = Color.green; }
+					}
+					else
+					{
+						if (c < 5)
+						{ col = Color.black; }
+						if (c == 0)
+						{ col = Color.green; }
+
+						if (c >= xSize - 5)
+						{ col = Color.black; }
+						if (c == xSize - 1)
+						{ col = Color.red; }
+					}
+					*/
+
+					colors[r * (xSize + 1) + c] = col;
+				}
+			}
+
+			Texture2D texture = new Texture2D(xSize + 1, zSize + 1);
+
+			texture.SetPixels(colors);
+			texture.Apply();
+
+			return texture;
 		}
 	}
 }
