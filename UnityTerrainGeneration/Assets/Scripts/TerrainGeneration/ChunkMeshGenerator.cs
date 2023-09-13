@@ -227,19 +227,35 @@ namespace UnityTerrainGeneration.TerrainGeneration
 	
 		public static Texture2D MakeTexture(TerrainGene terrainGene, int size, float chunkScale, long xOff, long zOff, int textureRescaler)
 		{
-			int xSize = size;
-			int zSize = size;
+			int xSize = size * textureRescaler;
+			int zSize = size * textureRescaler;
+
+			float chunkScalePixel = chunkScale / textureRescaler;
 
 			Color[] colors = new Color[(xSize + 1) * (zSize + 1)];
 			for (int c = 0; c < xSize + 1; c++)
 			{
 				for (int r = 0; r < zSize + 1; r++)
 				{
-					float xCoord = chunkScale * (c + xSize * xOff);
-					float zCoord = chunkScale * (r + xSize * zOff);
+					float xCoord = chunkScalePixel * (c + xSize * xOff);
+					float zCoord = chunkScalePixel * (r + zSize * zOff);
 
 					float height = terrainGene.HeightAt(xCoord, zCoord);
-					Color col = Color.Lerp(Color.black, Color.white, (height - 34f) / 606f);
+
+					float heightWest = terrainGene.HeightAt(xCoord - chunkScalePixel, zCoord);
+					float heightEast = terrainGene.HeightAt(xCoord + chunkScalePixel, zCoord);
+					float heightSouth = terrainGene.HeightAt(xCoord, zCoord - chunkScalePixel);
+					float heightNorth = terrainGene.HeightAt(xCoord, zCoord + chunkScalePixel);
+
+					float slopeHoriz = Mathf.Abs(heightEast - heightWest);
+					float slopeVert = Mathf.Abs(heightNorth - heightSouth);
+					float slope = (slopeHoriz + slopeVert) / chunkScalePixel;
+
+					Color col;
+					if (slope > 3.1f)
+					{ col = GRAYSTONE; }
+					else
+					{ col = GREENGRASS; }
 					
 					/*
 					if (c < 5)
