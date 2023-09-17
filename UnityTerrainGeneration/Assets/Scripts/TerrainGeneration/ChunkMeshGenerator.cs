@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Threading.Tasks;
+using UnityEngine;
 
 namespace UnityTerrainGeneration.TerrainGeneration
 {
@@ -225,7 +226,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			return ret;
 		}
 	
-		public static Texture2D MakeTexture(TerrainGene terrainGene, int size, float chunkScale, long xOff, long zOff, int textureRescaler)
+		public static async Task<Texture2D> MakeTexture(TerrainGene terrainGene, int size, float chunkScale, long xOff, long zOff, int textureRescaler)
 		{
 			int xSize = size * textureRescaler;
 			int zSize = size * textureRescaler;
@@ -237,11 +238,17 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			{
 				for (int r = 0; r < zSize + 1; r++)
 				{
+					Color col;
+
 					float xCoord = chunkScalePixel * (c + xSize * xOff);
 					float zCoord = chunkScalePixel * (r + zSize * zOff);
 
 					float height = terrainGene.HeightAt(xCoord, zCoord);
 
+					// col = new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f));
+					col = Color.Lerp(Color.black, Color.white, (height - 34f) / 606f);
+
+					/*
 					float heightWest = terrainGene.HeightAt(xCoord - chunkScalePixel, zCoord);
 					float heightEast = terrainGene.HeightAt(xCoord + chunkScalePixel, zCoord);
 					float heightSouth = terrainGene.HeightAt(xCoord, zCoord - chunkScalePixel);
@@ -251,11 +258,11 @@ namespace UnityTerrainGeneration.TerrainGeneration
 					float slopeVert = Mathf.Abs(heightNorth - heightSouth);
 					float slope = (slopeHoriz + slopeVert) / chunkScalePixel;
 
-					Color col;
 					if (slope > 3.1f)
 					{ col = GRAYSTONE; }
 					else
 					{ col = GREENGRASS; }
+					*/
 					
 					/*
 					if (c < 5)
@@ -307,6 +314,9 @@ namespace UnityTerrainGeneration.TerrainGeneration
 					*/
 
 					colors[r * (xSize + 1) + c] = col;
+
+					if ((r * (xSize + 1) + c) % 32 == 0)
+					{ await Task.Yield(); }
 				}
 			}
 

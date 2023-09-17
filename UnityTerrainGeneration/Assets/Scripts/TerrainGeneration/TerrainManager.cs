@@ -30,6 +30,8 @@ namespace UnityTerrainGeneration.TerrainGeneration
 		private const long RELATIVE_CHUNK_RENDER_DIST = 7;
 		private static readonly float[] ADJUSTED_CHUNK_RENDER_DISTS = new float[NUM_LODS];
 
+		private const int CHUNK_TEXTURE_RESOLUTION_SCALER = 4;
+
 		private readonly MonoBehaviour controller;
 		private readonly Transform originTran;
 		private readonly Transform playerTran;
@@ -374,7 +376,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 				GameObj.SetActive(false);
 			}
 
-			public void GenerateMesh(TerrainManager terrainManager, float chunkScale, long offX, long offZ)
+			public async void GenerateMesh(TerrainManager terrainManager, float chunkScale, long offX, long offZ)
 			{
 				if (HasMesh)
 				{ Debug.LogWarning("Generating the mesh for a chunk that already has a mesh."); }
@@ -383,7 +385,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 				GameObj.GetComponent<MeshFilter>().mesh = mesh;
 				GameObj.GetComponent<MeshCollider>().sharedMesh = mesh;
-				GameObj.GetComponent<MeshRenderer>().material.mainTexture = ChunkMeshGenerator.MakeTexture(terrainManager.terrainGene, CHUNK_MESH_SIZE, chunkScale, offX, offZ, 1);
+				GameObj.GetComponent<MeshRenderer>().material.mainTexture = await ChunkMeshGenerator.MakeTexture(terrainManager.terrainGene, CHUNK_MESH_SIZE, chunkScale, offX, offZ, CHUNK_TEXTURE_RESOLUTION_SCALER);
 
 				HasMesh = true;
 			}
