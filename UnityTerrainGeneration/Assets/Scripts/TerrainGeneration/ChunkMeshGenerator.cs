@@ -213,9 +213,10 @@ namespace UnityTerrainGeneration.TerrainGeneration
 				}
 			}
 
+			Vector3[] normalsPre;
 			Vector3[] normals;
 			{
-				Vector3[] normalsPre = new Vector3[verticesPre.Length];
+				normalsPre = new Vector3[verticesPre.Length];
 
 				for (int c = 0; c < size + 2; c++)
 				{
@@ -274,13 +275,21 @@ namespace UnityTerrainGeneration.TerrainGeneration
 					for (int r = 0; r < size + 1; r++)
 					{
 						Vector3 vertex = verticesPre[(c + 1) * (size + 3) + (r + 1)];
-						Vector3 normal = normals[c * (size + 1) + r];
-						// Vector3 realMeshNormal = normals[(c % textureRescaler) * (size + 1) + (r % textureRescaler)];
+						Vector3 normal = normalsPre[(c + 1) * (size + 3) + (r + 1)];
+						// Vector3 realMeshNormal = normals[(c / textureRescaler * textureRescaler) * (size + 1) + (r / textureRescaler * textureRescaler)];
+
+						Vector3 normalWest = normalsPre[(c + 1 - 1) * (size + 3) + (r + 1)];
+						Vector3 normalEast = normalsPre[(c + 1 + 1) * (size + 3) + (r + 1)];
+						Vector3 normalSouth = normalsPre[(c + 1) * (size + 3) + (r + 1 - 1)];
+						Vector3 normalNorth = normalsPre[(c + 1) * (size + 3) + (r + 1 + 1)];
+						Vector3 normalAvg = (normalWest + normalEast + normalSouth + normalNorth).normalized;
 
 						float steepness = Vector3.Angle(Vector3.up, normal) / 45f;
-						steepness = 1f / (1f + Mathf.Exp(-30f * (steepness - 0.9f)));
+						
 
-						Color normalColor = new Color(normal.x * 0.5f + 0.5f, normal.z * 0.5f + 0.5f, normal.y * 0.5f + 0.5f);
+						Vector3 normalForColor = normal;
+						Color normalColor = new Color(normalForColor.x * 0.5f + 0.5f, normalForColor.z * 0.5f + 0.5f, normalForColor.y * 0.5f + 0.5f);
+						normalColor = new Color(0.5f, 0.5f, 1f);
 
 						colors[r * (size + 1) + c] = terrainGene.GroundColorAt(vertex.x, vertex.z, vertex.y, steepness);
 						normalsColors[r * (size + 1) + c] = normalColor;

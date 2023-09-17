@@ -47,10 +47,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			// ret = new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f));
 			// ret = Color.Lerp(Color.black, Color.white, (precalculatedHeightValue - 0f) / 10f);
 
-			if (steepness > 0.5f)
-			{ ret = GRAYSTONE; }
-			else
-			{ ret = GREENGRASS; }
+			ret = Color.Lerp(GREENGRASS, GRAYSTONE, steepness * 3f - 2.1f);
 
 			return ret;
 		}
