@@ -15,58 +15,39 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 	internal static class ChunkMeshGenerator
 	{
-		private static readonly Color GREENGRASS = new(0.1f, 0.25f, 0.05f);
-		private static readonly Color GRAYSTONE = new(0.21f, 0.21f, 0.21f);
-		private static readonly Color WHITESNOW = new(0.5f, 0.5f, 0.6f);
-		private static readonly Color DEBUGCOLOR = new(1f, 0f, 0f);
-
-		// DEBUG:
-		private static readonly Color[] DEBUG_LOD_COLORS =
-		{
-			new(1f, 0f, 0f),
-			new(1f, 1f, 0f),
-			new(0f, 1f, 0f),
-			new(0f, 1f, 1f),
-			new(0f, 0f, 1f),
-			new(1f, 0f, 1f)
-		};
-
 		private static readonly Color DEBUG_COLOR_RED = new(1f, 0f, 0f);
 		private static readonly Color DEBUG_COLOR_BLUE = new(0f, 0f, 1f);
 
-		public static Mesh MakeMesh(TerrainGene terrainGene, int size, float chunkScale, long xOff, long zOff, LodTransitions lodTransitions)
+		public static Mesh MakeMesh(TerrainGene terrainGene, int size, float chunkScale, long xOff, long zOff, LodTransitions lodTransitions = LodTransitions.None)
 		{
-			int xSize = size;
-			int zSize = size;
-
-			if ((xSize + 3) * (zSize + 3) > 65535)
+			if ((size + 3) * (size + 3) > 65535)
 			{ Debug.LogException(new System.Exception("The chunk size is too big.")); }
 
-			if (xSize % 2 != 0 || zSize % 2 != 0)
+			if (size % 2 != 0)
 			{ Debug.LogException(new System.Exception("The chunk size must be even.")); }
 
 			Vector3[] verticesPre;
 			{
-				verticesPre = new Vector3[(xSize + 3) * (zSize + 3)];
+				verticesPre = new Vector3[(size + 3) * (size + 3)];
 
-				for (int c = 0; c < xSize + 3; c++)
+				for (int c = 0; c < size + 3; c++)
 				{
-					for (int r = 0; r < zSize + 3; r++)
+					for (int r = 0; r < size + 3; r++)
 					{
 						float xVal = chunkScale * (c - 1);
 						float zVal = chunkScale * (r - 1);
 
-						float xValOff = chunkScale * (c - 1 + xSize * xOff);
-						float zValOff = chunkScale * (r - 1 + xSize * zOff);
+						float xValOff = chunkScale * (c - 1 + size * xOff);
+						float zValOff = chunkScale * (r - 1 + size * zOff);
 
 						bool doZLodTran = (
 							(lodTransitions.HasFlag(LodTransitions.Left) && c < 2)
-							|| (lodTransitions.HasFlag(LodTransitions.Right) && c > xSize)
+							|| (lodTransitions.HasFlag(LodTransitions.Right) && c > size)
 						) && r % 2 == 0;
 
 						bool doXLodTran = (
 							(lodTransitions.HasFlag(LodTransitions.Bottom) && r < 2)
-							|| (lodTransitions.HasFlag(LodTransitions.Top) && r > zSize)
+							|| (lodTransitions.HasFlag(LodTransitions.Top) && r > size)
 						) && c % 2 == 0;
 
 						float yVal;
@@ -81,246 +62,190 @@ namespace UnityTerrainGeneration.TerrainGeneration
 							yVal = terrainGene.HeightAt(xValOff, zValOff);
 						}
 
-						verticesPre[c * (zSize + 3) + r] = new Vector3(xVal, yVal, zVal);
+						verticesPre[c * (size + 3) + r] = new Vector3(xVal, yVal, zVal);
 					}
 				}
 			}
 
 			Vector3[] vertices;
 			{
-				vertices = new Vector3[(xSize + 1) * (zSize + 1)];
+				vertices = new Vector3[(size + 1) * (size + 1)];
 
-				for (int c = 0; c < xSize + 1; c++)
+				for (int c = 0; c < size + 1; c++)
 				{
-					for (int r = 0; r < zSize + 1; r++)
+					for (int r = 0; r < size + 1; r++)
 					{
-						vertices[c * (zSize + 1) + r] = verticesPre[(c + 1) * (zSize + 3) + (r + 1)];
+						vertices[c * (size + 1) + r] = verticesPre[(c + 1) * (size + 3) + (r + 1)];
 					}
 				}
 			}
 
 			int[] triangles;
 			{
-				triangles = new int[6 * xSize * zSize];
+				triangles = new int[6 * size * size];
 
-				for (int c = 0; c < xSize; c++)
+				for (int c = 0; c < size; c++)
 				{
-					for (int r = 0; r < zSize; r++)
+					for (int r = 0; r < size; r++)
 					{
-						int topLeft = (c) * (zSize + 1) + (r);
-						int topRight = (c + 1) * (zSize + 1) + (r);
-						int bottomLeft = (c) * (zSize + 1) + (r + 1);
-						int bottomRight = (c + 1) * (zSize + 1) + (r + 1);
+						int topLeft = (c) * (size + 1) + (r);
+						int topRight = (c + 1) * (size + 1) + (r);
+						int bottomLeft = (c) * (size + 1) + (r + 1);
+						int bottomRight = (c + 1) * (size + 1) + (r + 1);
 
-						triangles[6 * (c * zSize + r) + 0] = topLeft;
-						triangles[6 * (c * zSize + r) + 1] = bottomLeft;
-						triangles[6 * (c * zSize + r) + 2] = topRight;
-						triangles[6 * (c * zSize + r) + 3] = topRight;
-						triangles[6 * (c * zSize + r) + 4] = bottomLeft;
-						triangles[6 * (c * zSize + r) + 5] = bottomRight;
+						triangles[6 * (c * size + r) + 0] = topLeft;
+						triangles[6 * (c * size + r) + 1] = bottomLeft;
+						triangles[6 * (c * size + r) + 2] = topRight;
+						triangles[6 * (c * size + r) + 3] = topRight;
+						triangles[6 * (c * size + r) + 4] = bottomLeft;
+						triangles[6 * (c * size + r) + 5] = bottomRight;
 					}
 				}
 			}
 
-			Vector3[] normals = MakeNormals(verticesPre, xSize, zSize);
-
-			Vector2[] uvs;
+			Vector3[] normals;
 			{
-				uvs = new Vector2[(xSize + 1) * (zSize + 1)];
+				Vector3[] normalsPre = new Vector3[verticesPre.Length];
 
-				for (int c = 0; c < xSize + 1; c++)
+				for (int c = 0; c < size + 2; c++)
 				{
-					for (int r = 0; r < zSize + 1; r++)
+					for (int r = 0; r < size + 2; r++)
 					{
-						uvs[c * (zSize + 1) + r] = new Vector2((c + 0.5f) / (float)(xSize + 1), (r + 0.5f) / (float)(zSize + 1));
+						int topLeft = (c) * (size + 3) + (r);
+						int topRight = (c + 1) * (size + 3) + (r);
+						int bottomLeft = (c) * (size + 3) + (r + 1);
+						int bottomRight = (c + 1) * (size + 3) + (r + 1);
+
+						Vector3 vertexTopLeft = verticesPre[topLeft];
+						Vector3 vertexTopRight = verticesPre[topRight];
+						Vector3 vertexBottomLeft = verticesPre[bottomLeft];
+						Vector3 vertexBottomRight = verticesPre[bottomRight];
+
+						{
+							Vector3 normal = Vector3.Cross(vertexBottomLeft - vertexTopLeft, vertexTopRight - vertexTopLeft).normalized;
+							normalsPre[topLeft] += normal;
+							normalsPre[topRight] += normal;
+							normalsPre[bottomLeft] += normal;
+						}
+
+						{
+							Vector3 normal = Vector3.Cross(vertexTopRight - vertexBottomRight, vertexBottomLeft - vertexBottomRight).normalized;
+							normalsPre[topRight] += normal;
+							normalsPre[bottomLeft] += normal;
+							normalsPre[bottomRight] += normal;
+						}
+					}
+				}
+
+				for (int i = 0; i < normalsPre.Length; i++)
+				{
+					normalsPre[i].Normalize();
+				}
+
+				normals = new Vector3[(size + 1) * (size + 1)];
+
+				for (int c = 0; c < size + 1; c++)
+				{
+					for (int r = 0; r < size + 1; r++)
+					{
+						normals[c * (size + 1) + r] = normalsPre[(c + 1) * (size + 3) + (r + 1)];
 					}
 				}
 			}
 
-			/*
-			Color[] colors;
+			Vector2[] uv;
 			{
-				colors = new Color[(xSize + 1) * (zSize + 1)];
+				uv = new Vector2[(size + 1) * (size + 1)];
 
-				for (int i = 0; i < colors.Length; i++)
+				for (int c = 0; c < size + 1; c++)
 				{
-					float steepness = Vector3.Angle(Vector3.up, normals[i]) / 45f;
-					steepness = 1f / (1f + Mathf.Exp(-30f * (steepness - 0.9f)));
-					Color col = Color.Lerp(GREENGRASS, GRAYSTONE, steepness);
-					colors[i] = col;
-
-					// DEBUG:
-					// colors[i] = Color.Lerp(DEBUG_COLOR_RED, DEBUG_COLOR_BLUE, chunkScale / 32f);
-
-					// colors[i] = GREENGRASS;
+					for (int r = 0; r < size + 1; r++)
+					{
+						uv[c * (size + 1) + r] = new Vector2((c + 0.5f) / (float)(size + 1), (r + 0.5f) / (float)(size + 1));
+					}
 				}
 			}
-			*/
 
 			Mesh mesh = new();
 			{
 				mesh.name = "ScriptGeneratedMesh";
 				mesh.vertices = vertices;
 				mesh.triangles = triangles;
-				mesh.uv = uvs;
-
+				mesh.uv = uv;
 				mesh.normals = normals;
+
 				mesh.Optimize();
 			};
 
 			return mesh;
 		}
 
-		private static Vector3[] MakeNormals(Vector3[] verticesPre, int xSize, int zSize)
+		private const int TEXTURE_TASK_YIELD_INTERVAL = 500;
+
+		public static async Task<Texture2D> MakeTexture(TerrainGene terrainGene, int sizePre, float chunkScale, long xOff, long zOff, int textureRescaler)
 		{
-			Vector3[] retPre = new Vector3[verticesPre.Length];
+			int size = sizePre * textureRescaler;
 
-			for (int c = 0; c < xSize + 2; c++)
+			float chunkScalePixel = chunkScale / (float)textureRescaler;
+
+			float[] precalculatedHeights = new float[(size + 1) * (size + 1)];
+			for (int c = 0; c < size + 1; c++)
 			{
-				for (int r = 0; r < zSize + 2; r++)
+				for (int r = 0; r < size + 1; r++)
 				{
-					int topLeft = (c) * (zSize + 3) + (r);
-					int topRight = (c + 1) * (zSize + 3) + (r);
-					int bottomLeft = (c) * (zSize + 3) + (r + 1);
-					int bottomRight = (c + 1) * (zSize + 3) + (r + 1);
+					float xCoord = chunkScalePixel * (c + size * xOff);
+					float zCoord = chunkScalePixel * (r + size * zOff);
 
-					Vector3 vertexTopLeft = verticesPre[topLeft];
-					Vector3 vertexTopRight = verticesPre[topRight];
-					Vector3 vertexBottomLeft = verticesPre[bottomLeft];
-					Vector3 vertexBottomRight = verticesPre[bottomRight];
-
-					{
-						Vector3 normal = Vector3.Cross(vertexBottomLeft - vertexTopLeft, vertexTopRight - vertexTopLeft).normalized;
-						retPre[topLeft] += normal;
-						retPre[topRight] += normal;
-						retPre[bottomLeft] += normal;
-					}
-
-					{
-						Vector3 normal = Vector3.Cross(vertexTopRight - vertexBottomRight, vertexBottomLeft - vertexBottomRight).normalized;
-						retPre[topRight] += normal;
-						retPre[bottomLeft] += normal;
-						retPre[bottomRight] += normal;
-					}
+					precalculatedHeights[r * (size + 1) + c] = terrainGene.HeightAt(xCoord, zCoord);
 				}
 			}
 
-			for (int i = 0; i < retPre.Length; i++)
+			Color[] colors = new Color[(size + 1) * (size + 1)];
+			for (int c = 0; c < size + 1; c++)
 			{
-				retPre[i].Normalize();
-			}
-
-			Vector3[] ret;
-			{
-				ret = new Vector3[(xSize + 1) * (zSize + 1)];
-
-				for (int c = 0; c < xSize + 1; c++)
+				for (int r = 0; r < size + 1; r++)
 				{
-					for (int r = 0; r < zSize + 1; r++)
-					{
-						ret[c * (zSize + 1) + r] = retPre[(c + 1) * (zSize + 3) + (r + 1)];
-					}
-				}
-			}
+					float xCoord = chunkScalePixel * (c + size * xOff);
+					float zCoord = chunkScalePixel * (r + size * zOff);
 
-			return ret;
-		}
-	
-		public static async Task<Texture2D> MakeTexture(TerrainGene terrainGene, int size, float chunkScale, long xOff, long zOff, int textureRescaler)
-		{
-			int xSize = size * textureRescaler;
-			int zSize = size * textureRescaler;
+					float height = precalculatedHeights[r * (size + 1) + c];
 
-			float chunkScalePixel = chunkScale / textureRescaler;
+					float heightWest;
+					if (c > 0)
+					{ heightWest = precalculatedHeights[r * (size + 1) + (c - 1)]; }
+					else
+					{ heightWest =  terrainGene.HeightAt(xCoord - chunkScalePixel, zCoord); }
 
-			Color[] colors = new Color[(xSize + 1) * (zSize + 1)];
-			for (int c = 0; c < xSize + 1; c++)
-			{
-				for (int r = 0; r < zSize + 1; r++)
-				{
-					Color col;
+					float heightEast;
+					if (c < size)
+					{ heightEast = precalculatedHeights[r * (size + 1) + (c + 1)]; }
+					else
+					{ heightEast =  terrainGene.HeightAt(xCoord + chunkScalePixel, zCoord); }
 
-					float xCoord = chunkScalePixel * (c + xSize * xOff);
-					float zCoord = chunkScalePixel * (r + zSize * zOff);
+					float heightSouth;
+					if (r > 0)
+					{ heightSouth = precalculatedHeights[(r - 1) * (size + 1) + c]; }
+					else
+					{ heightSouth =  terrainGene.HeightAt(xCoord, zCoord - chunkScalePixel); }
 
-					float height = terrainGene.HeightAt(xCoord, zCoord);
-
-					// col = new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f));
-					col = Color.Lerp(Color.black, Color.white, (height - 34f) / 606f);
-
-					/*
-					float heightWest = terrainGene.HeightAt(xCoord - chunkScalePixel, zCoord);
-					float heightEast = terrainGene.HeightAt(xCoord + chunkScalePixel, zCoord);
-					float heightSouth = terrainGene.HeightAt(xCoord, zCoord - chunkScalePixel);
-					float heightNorth = terrainGene.HeightAt(xCoord, zCoord + chunkScalePixel);
+					float heightNorth;
+					if (r < size)
+					{ heightNorth = precalculatedHeights[(r + 1) * (size + 1) + c]; }
+					else
+					{ heightNorth =  terrainGene.HeightAt(xCoord, zCoord + chunkScalePixel); }
 
 					float slopeHoriz = Mathf.Abs(heightEast - heightWest);
 					float slopeVert = Mathf.Abs(heightNorth - heightSouth);
 					float slope = (slopeHoriz + slopeVert) / chunkScalePixel;
 
-					if (slope > 3.1f)
-					{ col = GRAYSTONE; }
-					else
-					{ col = GREENGRASS; }
-					*/
-					
-					/*
-					if (c < 5)
-					{ col = Color.black; }
-					if (c == 0)
-					{ col = Color.red; }
+					colors[r * (size + 1) + c] = terrainGene.GroundColorAt(xCoord, zCoord, height, slope);
 
-					if (c >= xSize + 1 - 5)
-					{ col = Color.black; }
-					if (c == xSize + 1 - 1)
-					{ col = Color.cyan; }
-
-					if (r < 5)
-					{ col = Color.black; }
-					if (r == 0)
-					{ col = Color.green; }
-
-					if (r >= zSize + 1 - 5)
-					{ col = Color.black; }
-					if (r == zSize + 1 - 1)
-					{ col = Color.blue; }
-					*/
-
-					/*
-					if (xOff % 2 == 0)
-					{
-						if (c < 5)
-						{ col = Color.black; }
-						if (c == 0)
-						{ col = Color.red; }
-
-						if (c >= xSize - 5)
-						{ col = Color.black; }
-						if (c == xSize - 1)
-						{ col = Color.green; }
-					}
-					else
-					{
-						if (c < 5)
-						{ col = Color.black; }
-						if (c == 0)
-						{ col = Color.green; }
-
-						if (c >= xSize - 5)
-						{ col = Color.black; }
-						if (c == xSize - 1)
-						{ col = Color.red; }
-					}
-					*/
-
-					colors[r * (xSize + 1) + c] = col;
-
-					if ((r * (xSize + 1) + c) % 32 == 0)
+					if (false && (r * (size + 1) + c) % TEXTURE_TASK_YIELD_INTERVAL == 0)
 					{ await Task.Yield(); }
 				}
 			}
 
-			Texture2D texture = new Texture2D(xSize + 1, zSize + 1);
+			Texture2D texture = new Texture2D(size + 1, size + 1);
 
 			texture.SetPixels(colors);
 			texture.Apply();

@@ -237,7 +237,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   PlayerTran: {fileID: 1322637996}
-  TerrainMat: {fileID: 2100000, guid: da148db828df0204aaee20fcf97d51df, type: 2}
+  TerrainMat: {fileID: 2100000, guid: 950598d0d65377e4194896e7563b1c5b, type: 2}
 --- !u!4 &1144685208
 Transform:
   m_ObjectHideFlags: 0
@@ -279,7 +279,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1322637995}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2141.92, y: 630.54, z: -447.87}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:

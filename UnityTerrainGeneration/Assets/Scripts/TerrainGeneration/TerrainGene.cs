@@ -17,8 +17,8 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 		public float HeightAt(float _x, float _z)
 		{
-			double x = 0.1 * _x;
-			double z = 0.1 * _z;
+			double x = 5.0 * _x;
+			double z = 5.0 * _z;
 
 			double y = 0f;
 
@@ -31,8 +31,28 @@ namespace UnityTerrainGeneration.TerrainGeneration
 				freq *= 1.7;
 			}
 
-			y = 15 * Math.Exp(y);
+			y = 0.7 * Math.Exp(y);
 			return (float)y;
+		}
+
+		private static readonly Color GREENGRASS = new(0.1f, 0.25f, 0.05f);
+		private static readonly Color GRAYSTONE = new(0.31f, 0.31f, 0.31f);
+		private static readonly Color WHITESNOW = new(0.5f, 0.5f, 0.6f);
+		private static readonly Color DEBUG_COLOR_RED = new(1f, 0f, 0f);
+		private static readonly Color DEBUG_COLOR_BLUE = new(0f, 0f, 1f);
+		public Color GroundColorAt(float _x, float _z, float precalculatedHeightValue, float precalculatedSlopeValue)
+		{
+			Color ret;
+
+			// ret = new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f));
+			// ret = Color.Lerp(Color.black, Color.white, (precalculatedHeightValue - 0f) / 10f);
+
+			if (precalculatedSlopeValue > 3.1f)
+			{ ret = GRAYSTONE; }
+			else
+			{ ret = GREENGRASS; }
+
+			return ret;
 		}
 	}
 }
