@@ -40,14 +40,14 @@ namespace UnityTerrainGeneration.TerrainGeneration
 		private static readonly Color WHITESNOW = new(0.5f, 0.5f, 0.6f);
 		private static readonly Color DEBUG_COLOR_RED = new(1f, 0f, 0f);
 		private static readonly Color DEBUG_COLOR_BLUE = new(0f, 0f, 1f);
-		public Color GroundColorAt(float _x, float _z, float precalculatedHeightValue, float precalculatedSlopeValue)
+		public Color GroundColorAt(float _x, float _z, float height, float steepness)
 		{
 			Color ret;
 
 			// ret = new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f));
 			// ret = Color.Lerp(Color.black, Color.white, (precalculatedHeightValue - 0f) / 10f);
 
-			if (precalculatedSlopeValue > 3.1f)
+			if (steepness > 0.5f)
 			{ ret = GRAYSTONE; }
 			else
 			{ ret = GREENGRASS; }
