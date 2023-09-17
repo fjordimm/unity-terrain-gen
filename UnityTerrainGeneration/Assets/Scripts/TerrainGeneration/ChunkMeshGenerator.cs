@@ -275,12 +275,15 @@ namespace UnityTerrainGeneration.TerrainGeneration
 					{
 						Vector3 vertex = verticesPre[(c + 1) * (size + 3) + (r + 1)];
 						Vector3 normal = normals[c * (size + 1) + r];
+						// Vector3 realMeshNormal = normals[(c % textureRescaler) * (size + 1) + (r % textureRescaler)];
 
 						float steepness = Vector3.Angle(Vector3.up, normal) / 45f;
 						steepness = 1f / (1f + Mathf.Exp(-30f * (steepness - 0.9f)));
 
+						Color normalColor = new Color(normal.x * 0.5f + 0.5f, normal.z * 0.5f + 0.5f, normal.y * 0.5f + 0.5f);
+
 						colors[r * (size + 1) + c] = terrainGene.GroundColorAt(vertex.x, vertex.z, vertex.y, steepness);
-						normalsColors[r * (size + 1) + c] = new Color(normal.x * 0.5f + 0.5f, normal.z * 0.5f + 0.5f, normal.y * 0.5f + 0.5f);
+						normalsColors[r * (size + 1) + c] = normalColor;
 					}
 				}
 			}
@@ -289,11 +292,13 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			mainTexture.SetPixels(colors);
 			mainTexture.Apply();
 
-			Texture2D bumpMap = new Texture2D(size + 1, size + 1);
-			bumpMap.SetPixels(normalsColors);
-			bumpMap.Apply();
+			Texture2D normalMap = new Texture2D(size + 1, size + 1, TextureFormat.RGBA32, true, true);
+			normalMap.filterMode = FilterMode.Trilinear;
+			normalMap.wrapMode = TextureWrapMode.Clamp;
+			normalMap.SetPixels(normalsColors);
+			normalMap.Apply();
 
-			return (mainTexture, bumpMap);
+			return (mainTexture, normalMap);
 		}
 	}
 }

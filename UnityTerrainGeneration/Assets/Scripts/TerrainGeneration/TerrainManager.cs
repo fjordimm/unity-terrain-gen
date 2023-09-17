@@ -53,7 +53,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			chonk.GetComponent<MeshFilter>().sharedMesh = mosh;
 			chonk.GetComponent<MeshCollider>().sharedMesh = mosh;
 			
-			(Texture mainTexture, Texture bumpMap) = await ChunkMeshGenerator.MakeTexture(this.terrainGene, TEMP_CHUNK_SIZE, TEMP_CHUNK_SCALE, 0, 0, 6);
+			(Texture mainTexture, Texture bumpMap) = await ChunkMeshGenerator.MakeTexture(this.terrainGene, TEMP_CHUNK_SIZE, TEMP_CHUNK_SCALE, 0, 0, 1);
 			chonkRenderer.material.mainTexture = mainTexture;
 			chonkRenderer.material.EnableKeyword("_NORMALMAP");
 			chonkRenderer.material.SetTexture("_BumpMap", bumpMap);
