@@ -9,14 +9,20 @@ using UnityTerrainGeneration.TerrainGeneration;
 
 public class ProceduralGrassRenderer : MonoBehaviour
 {
-	[SerializeField] private Mesh sourceMesh = default;
-	[SerializeField] private ComputeShader grassComputeShader = default;
-	[SerializeField] private Material material = default;
+	ComputeShader grassComputeShader = null;
+	private Material material = null;
+	private Mesh sourceMesh = null;
 
-	[System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
-	private struct SourceVertex
+	public void SetComputeShader(ComputeShader grassComputeShader)
+	{ this.grassComputeShader = grassComputeShader; }
+	
+	public void SetMaterial(Material material)
+	{ this.material = material; }
+
+	public void SetSourceMeshAndRender(Mesh sourceMesh)
 	{
-		public Vector3 position;
+		this.sourceMesh = sourceMesh;
+		OnMeshReady();
 	}
 
 	private bool initialized;
@@ -35,9 +41,9 @@ public class ProceduralGrassRenderer : MonoBehaviour
 
 	private int[] argsBufferReset = new int[] {0, 1, 0, 0};
 
-	public void OnEnable()
+	public void OnMeshReady()
 	{
-		Debug.Assert(grassComputeShader != null, "The grass computer shader is null", gameObject);
+		Debug.Assert(grassComputeShader != null, "The grass compute shader is null", gameObject);
 		Debug.Assert(material != null, "The material is null", gameObject);
 
 		if (initialized)
@@ -79,6 +85,9 @@ public class ProceduralGrassRenderer : MonoBehaviour
 
 	private void OnDisable()
 	{
+		if (sourceMesh == null)
+		{ return; }
+
 		if (initialized)
 		{
 			sourceVertBuffer.Release();
@@ -87,6 +96,29 @@ public class ProceduralGrassRenderer : MonoBehaviour
 			argsBuffer.Release();
 		}
 		initialized = false;
+	}
+
+	private void LateUpdate()
+	{
+		if (sourceMesh == null)
+		{ return; }
+
+		if (Application.isPlaying == false)
+		{
+			OnDisable();
+			OnMeshReady();
+		}
+
+		drawBuffer.SetCounterValue(0);
+		argsBuffer.SetData(argsBufferReset);
+
+		Bounds bounds = TransformBounds(localBounds);
+
+		grassComputeShader.SetMatrix("_LocalToWorld", transform.localToWorldMatrix);
+
+		grassComputeShader.Dispatch(idGrassKernel, dispatchSize, 1, 1);
+
+		Graphics.DrawProceduralIndirect(material, bounds, MeshTopology.Triangles, argsBuffer, 0, null, null, ShadowCastingMode.Off, true, gameObject.layer);
 	}
 
 	public Bounds TransformBounds(Bounds boundsOS)
@@ -105,23 +137,9 @@ public class ProceduralGrassRenderer : MonoBehaviour
 		return new Bounds { center = center, extents = extents };
 	}
 
-	private void LateUpdate()
+	[System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+	private struct SourceVertex
 	{
-		if (Application.isPlaying == false)
-		{
-			OnDisable();
-			OnEnable();
-		}
-
-		drawBuffer.SetCounterValue(0);
-		argsBuffer.SetData(argsBufferReset);
-
-		Bounds bounds = TransformBounds(localBounds);
-
-		grassComputeShader.SetMatrix("_LocalToWorld", transform.localToWorldMatrix);
-
-		grassComputeShader.Dispatch(idGrassKernel, dispatchSize, 1, 1);
-
-		Graphics.DrawProceduralIndirect(material, bounds, MeshTopology.Triangles, argsBuffer, 0, null, null, ShadowCastingMode.Off, true, gameObject.layer);
+		public Vector3 position;
 	}
 }

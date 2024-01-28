@@ -17,16 +17,22 @@ namespace UnityTerrainGeneration.TerrainGeneration
 		private readonly Material terrainMat;
 		private readonly int seed;
 
+		private readonly ComputeShader grassComputeShader = default;
+		private readonly Material grassMaterial = default;
+
 		private readonly System.Random rand;
 		private readonly TerrainGene terrainGene;
 
-		public TerrainManager(MonoBehaviour _controller, Transform _originTran, Transform _playerTran, Material _terrainMat, int _seed)
+		public TerrainManager(MonoBehaviour _controller, Transform _originTran, Transform _playerTran, Material _terrainMat, int _seed, ComputeShader _grassComputeShader, Material _grassMaterial)
 		{
 			controller = _controller;
 			originTran = _originTran;
 			playerTran = _playerTran;
 			terrainMat = _terrainMat;
 			seed = _seed;
+
+			grassComputeShader = _grassComputeShader;
+			grassMaterial = _grassMaterial;
 
 			rand = new System.Random(seed);
 			terrainGene = new TerrainGene(rand);
@@ -57,6 +63,11 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			chonkRenderer.material.mainTexture = mainTexture;
 			chonkRenderer.material.EnableKeyword("_NORMALMAP");
 			chonkRenderer.material.SetTexture("_BumpMap", bumpMap);
+
+			chonk.AddComponent<ProceduralGrassRenderer>();
+			chonk.GetComponent<ProceduralGrassRenderer>().SetComputeShader(grassComputeShader);
+			chonk.GetComponent<ProceduralGrassRenderer>().SetMaterial(grassMaterial);
+			chonk.GetComponent<ProceduralGrassRenderer>().SetSourceMeshAndRender(mosh);
 		}
 	}
 }
