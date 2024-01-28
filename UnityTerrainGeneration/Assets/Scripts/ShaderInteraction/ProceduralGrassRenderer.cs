@@ -13,7 +13,9 @@ public class ProceduralGrassRenderer : MonoBehaviour
 	[Serializable]
 	public class GrassSettings
 	{
+		public int maxSegments = 3;
 		public float maxBendAngle = 0;
+		public float bladeCurvature = 1;
 		public float bladeHeight = 1;
 		public float bladeHeightVariance = 0.1f;
 		public float bladeWidth = 1;
@@ -72,12 +74,14 @@ public class ProceduralGrassRenderer : MonoBehaviour
 		for (int i = 0; i < vertices.Length; i++)
 		{ vertices[i] = new SourceVertex() { position = positions[i] }; }
 		int numSourceTriangles = tris.Length / 3;
+		int maxBladeSegments = Mathf.Max(1, grassSettings.maxSegments);
+		int maxBladeTriangles = (maxBladeSegments - 1) * 2 + 1;
 
 		sourceVertBuffer = new ComputeBuffer(vertices.Length, SOURCE_VERT_STRIDE, ComputeBufferType.Structured, ComputeBufferMode.Immutable);
 		sourceVertBuffer.SetData(vertices);
 		sourceTriBuffer = new ComputeBuffer(tris.Length, SOURCE_TRI_STRIDE, ComputeBufferType.Structured, ComputeBufferMode.Immutable);
 		sourceTriBuffer.SetData(tris);
-		drawBuffer = new ComputeBuffer(numSourceTriangles, DRAW_STRIDE, ComputeBufferType.Append);
+		drawBuffer = new ComputeBuffer(numSourceTriangles * maxBladeTriangles, DRAW_STRIDE, ComputeBufferType.Append);
 		drawBuffer.SetCounterValue(0);
 		argsBuffer = new ComputeBuffer(1, INDIRECT_ARGS_STRIDE, ComputeBufferType.IndirectArguments);
 
@@ -88,8 +92,9 @@ public class ProceduralGrassRenderer : MonoBehaviour
 		grassComputeShader.SetBuffer(idGrassKernel, "_DrawTriangles", drawBuffer);
 		grassComputeShader.SetBuffer(idGrassKernel, "_IndirectArgsBuffer", argsBuffer);
 		grassComputeShader.SetInt("_NumSourceTriangles", numSourceTriangles);
-
+		grassComputeShader.SetInt("_MaxBladeSegments", maxBladeSegments);
 		grassComputeShader.SetFloat("_MaxBendAngle", grassSettings.maxBendAngle);
+		grassComputeShader.SetFloat("BladeCurvature", Mathf.Max(0, grassSettings.bladeCurvature));
 		grassComputeShader.SetFloat("_BladeHeight", grassSettings.bladeHeight);
 		grassComputeShader.SetFloat("_BladeHeightVariance", grassSettings.bladeHeightVariance);
 		grassComputeShader.SetFloat("_BladeWidth", grassSettings.bladeWidth);
