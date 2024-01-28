@@ -28,8 +28,8 @@ struct VertexOutput
     float4 positionCS : SV_POSITION;
 };
 
-float4 _BaseColor;
-float4 _TipColor;
+float4 _GrassBladeBaseColor;
+float4 _GrassBladeTipColor;
 
 VertexOutput Vertex(uint vertexID: SV_VertexID)
 {
@@ -48,16 +48,16 @@ VertexOutput Vertex(uint vertexID: SV_VertexID)
 
 half4 Fragment(VertexOutput input) : SV_Target
 {
-    InputData lightingInput = (InputData) 0;
+    InputData lightingInput = (InputData)0;
     lightingInput.positionWS = input.positionWS;
     lightingInput.normalWS = input.normalWS;
     lightingInput.viewDirectionWS = GetViewDirectionFromPosition(input.positionWS);
     lightingInput.shadowCoord = CalculateShadowCoord(input.positionWS, input.positionCS);
     
     float colorLerp = input.uv;
-    float3 albedo = lerp(_BaseColor.rgb, _TipColor.rgb, input.uv);
+    float3 albedo = lerp(_GrassBladeBaseColor.rgb, _GrassBladeTipColor.rgb, input.uv);
     
-    SurfaceData surfaceInput = (SurfaceData) 0;
+    SurfaceData surfaceInput = (SurfaceData)0;
     surfaceInput.albedo = albedo;
     surfaceInput.alpha = 1;
     surfaceInput.specular = 1;
