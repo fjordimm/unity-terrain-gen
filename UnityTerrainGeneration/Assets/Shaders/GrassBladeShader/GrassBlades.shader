@@ -22,7 +22,8 @@ Shader "Grass/GrassBlades"
             Blend[_SrcBlend][_DstBlend]
             ZWrite[_ZWrite]
             Cull[_Cull]
-            // Cull Off
+
+            Cull Off
 
             HLSLPROGRAM
 
