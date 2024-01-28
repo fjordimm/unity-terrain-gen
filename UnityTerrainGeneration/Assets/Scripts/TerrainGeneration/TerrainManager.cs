@@ -24,11 +24,13 @@ namespace UnityTerrainGeneration.TerrainGeneration
 		{
 			return new ProceduralGrassRenderer.GrassSettings()
 			{
+				bladeMultipleSpread = chunkScale,
+				bladeMultipleAmount = (uint)Mathf.CeilToInt(chunkScale),
 				maxBendAngle = 0.1f,
-				bladeHeight = 3f * chunkScale,
-				bladeHeightVariance = 0.9f * chunkScale,
-				bladeWidth = 1f * chunkScale,
-				bladeWidthVariance = 0.1f * chunkScale,
+				bladeHeight = 3f,
+				bladeHeightVariance = 0.9f,
+				bladeWidth = 0.3f,
+				bladeWidthVariance = 0.01f,
 				grassEndSteepness = grassEndSteepness
 			};
 		}
@@ -55,7 +57,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 		}
 
 		private const int TEMP_CHUNK_SIZE = 64;
-		private const float TEMP_CHUNK_SCALE = 1f;
+		private const float TEMP_CHUNK_SCALE = 8f;
 		public async void BeginGeneration()
 		{
 			GameObject chonk = new GameObject("HahaImChonk");

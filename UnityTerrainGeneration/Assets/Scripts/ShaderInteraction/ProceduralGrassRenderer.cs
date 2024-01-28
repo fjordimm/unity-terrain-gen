@@ -13,10 +13,12 @@ public class ProceduralGrassRenderer : MonoBehaviour
 	[Serializable]
 	public class GrassSettings
 	{
-		public float maxBendAngle = 0;
-		public float bladeHeight = 1;
+		public float bladeMultipleSpread = 1f;
+		public uint bladeMultipleAmount = 1;
+		public float maxBendAngle = 0f;
+		public float bladeHeight = 1f;
 		public float bladeHeightVariance = 0.1f;
-		public float bladeWidth = 1;
+		public float bladeWidth = 1f;
 		public float bladeWidthVariance = 0.1f;
 		public float grassEndSteepness = 0.3f;
 	}
@@ -72,13 +74,14 @@ public class ProceduralGrassRenderer : MonoBehaviour
 		SourceVertex[] vertices = new SourceVertex[positions.Length];
 		for (int i = 0; i < vertices.Length; i++)
 		{ vertices[i] = new SourceVertex() { position = positions[i] }; }
+
 		int numSourceTriangles = tris.Length / 3;
 
 		sourceVertBuffer = new ComputeBuffer(vertices.Length, SOURCE_VERT_STRIDE, ComputeBufferType.Structured, ComputeBufferMode.Immutable);
 		sourceVertBuffer.SetData(vertices);
 		sourceTriBuffer = new ComputeBuffer(tris.Length, SOURCE_TRI_STRIDE, ComputeBufferType.Structured, ComputeBufferMode.Immutable);
 		sourceTriBuffer.SetData(tris);
-		drawBuffer = new ComputeBuffer(numSourceTriangles, DRAW_STRIDE, ComputeBufferType.Append);
+		drawBuffer = new ComputeBuffer(numSourceTriangles * (int)(grassSettings.bladeMultipleAmount * grassSettings.bladeMultipleAmount), DRAW_STRIDE, ComputeBufferType.Append);
 		drawBuffer.SetCounterValue(0);
 		argsBuffer = new ComputeBuffer(1, INDIRECT_ARGS_STRIDE, ComputeBufferType.IndirectArguments);
 
@@ -90,6 +93,8 @@ public class ProceduralGrassRenderer : MonoBehaviour
 		grassComputeShader.SetBuffer(idGrassKernel, "_IndirectArgsBuffer", argsBuffer);
 		grassComputeShader.SetInt("_NumSourceTriangles", numSourceTriangles);
 
+		grassComputeShader.SetFloat("_BladeMultipleSpread", grassSettings.bladeMultipleSpread);
+		grassComputeShader.SetInt("_BladeMultipleAmount", (int)grassSettings.bladeMultipleAmount);
 		grassComputeShader.SetFloat("_MaxBendAngle", grassSettings.maxBendAngle);
 		grassComputeShader.SetFloat("_BladeHeight", grassSettings.bladeHeight);
 		grassComputeShader.SetFloat("_BladeHeightVariance", grassSettings.bladeHeightVariance);
@@ -103,7 +108,7 @@ public class ProceduralGrassRenderer : MonoBehaviour
 		dispatchSize = Mathf.CeilToInt((float)numSourceTriangles / threadGroupSize);
 
 		localBounds = sourceMesh.bounds;
-		localBounds.Expand(Mathf.Max(grassSettings.bladeHeight + grassSettings.bladeHeightVariance, grassSettings.bladeWidth + grassSettings.bladeWidthVariance));
+		localBounds.Expand(Mathf.Max(5f + grassSettings.bladeHeight + grassSettings.bladeHeightVariance, grassSettings.bladeWidth + grassSettings.bladeWidthVariance));
 	}
 
 	private void OnDisable()

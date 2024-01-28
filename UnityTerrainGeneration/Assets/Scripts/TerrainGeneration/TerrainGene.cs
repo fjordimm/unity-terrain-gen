@@ -57,6 +57,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			return ret;
 		}
 
+		//private const float GRASS_END_STEEPNESS = 0.2f;
 		private const float GRASS_END_STEEPNESS = 0.2f;
 		public float GrassEndSteepness()
 		{

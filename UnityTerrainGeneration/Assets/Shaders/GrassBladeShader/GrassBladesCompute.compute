@@ -38,6 +38,8 @@ struct IndirectArgs
 RWStructuredBuffer<IndirectArgs> _IndirectArgsBuffer;
 
 int _NumSourceTriangles;
+float _BladeMultipleSpread;
+uint _BladeMultipleAmount;
 float _MaxBendAngle;
 float _BladeHeight;
 float _BladeHeightVariance;
@@ -96,30 +98,71 @@ void Main(uint3 id : SV_DispatchThreadID)
         tsToWs
     );
     
+    uint numTriangles = _BladeMultipleAmount * _BladeMultipleAmount;
     if (normalWS.y > (1 - _GrassEndSteepness))
     {
-        float2 dimensions = GetBladeDimensions(positionWS);
-        float3x3 twistMatrix = AngleAxis3x3(rand(positionWS, 2) * 3.141592653589793238462643383279502884197 * 2, float3(0, 0, 1));
-        float maxBend = rand(positionWS, 3) * 3.141592653589793238462643383279502884197 * 0.5f * _MaxBendAngle;
-        float3x3 bendMatrix = AngleAxis3x3(maxBend, float3(1, 0, 0));
+        for (uint c = 0; c < _BladeMultipleAmount; c++)
+        {
+            for (uint r = 0; r < _BladeMultipleAmount; r++)
+            {
+                float3 posOffset = positionWS;
+                
+                float spreadHalf = _BladeMultipleSpread / 4; // Half of the terrain ground square (so positionWS.x - spreadHalf is the left side of it)
+                float spreadSubdivLength = 4 * spreadHalf / (float)_BladeMultipleAmount;
+                posOffset.x += -spreadHalf + spreadSubdivLength * c;
+                posOffset.z += -spreadHalf + spreadSubdivLength * r;
+            
+                float2 dimensions = GetBladeDimensions(posOffset);
+                float3x3 twistMatrix = AngleAxis3x3(rand(posOffset, 2) * 3.141592653589793238462643383279502884197 * 2, float3(0, 0, 1));
+                float maxBend = rand(posOffset, 3) * 3.141592653589793238462643383279502884197 * 0.5f * _MaxBendAngle;
+                float3x3 bendMatrix = AngleAxis3x3(maxBend, float3(1, 0, 0));
+
+                DrawVertex vertices[3];
     
-        DrawVertex vertices[3];
+                float3x3 transform = mul(tsToWs, mul(twistMatrix, bendMatrix));
+            
+                vertices[0] = SetupBladePoint(posOffset, dimensions, transform, float2(0, 0));
+                vertices[1] = SetupBladePoint(posOffset, dimensions, transform, float2(1, 0));
+                vertices[2] = SetupBladePoint(posOffset, dimensions, transform, float2(0.5, 1));
     
-        float3x3 transform = mul(tsToWs, mul(twistMatrix, bendMatrix));
-    
-        vertices[0] = SetupBladePoint(positionWS, dimensions, transform, float2(0, 0));
-        vertices[1] = SetupBladePoint(positionWS, dimensions, transform, float2(1, 0));
-        vertices[2] = SetupBladePoint(positionWS, dimensions, transform, float2(0.5, 1));
-    
-        DrawTriangle tri = (DrawTriangle)0;
-        tri.lightingNormalWS = normalWS;
-        tri.vertices[0] = vertices[0];
-        tri.vertices[1] = vertices[1];
-        tri.vertices[2] = vertices[2];
+                DrawTriangle tri = (DrawTriangle) 0;
+                tri.lightingNormalWS = normalWS;
+                tri.vertices[0] = vertices[0];
+                tri.vertices[1] = vertices[1];
+                tri.vertices[2] = vertices[2];
         
-        _DrawTriangles.Append(tri);
+                _DrawTriangles.Append(tri);
+            }
+        }
     }
     
-    
-    InterlockedAdd(_IndirectArgsBuffer[0].numVerticesPerInstance, 3);
+    InterlockedAdd(_IndirectArgsBuffer[0].numVerticesPerInstance, numTriangles * 3);
 }
+
+
+
+
+
+/*
+float3 posOffset = positionWS;
+if (i == 0)
+{
+posOffset.x -= 0.25 * _BladeMultipleSpread;
+posOffset.z -= 0.25 * _BladeMultipleSpread;
+}
+else if (i == 1)
+{
+posOffset.x += 0.25 * _BladeMultipleSpread;
+posOffset.z -= 0.25 * _BladeMultipleSpread;
+}
+else if (i == 2)
+{
+posOffset.x -= 0.25 * _BladeMultipleSpread;
+posOffset.z += 0.25 * _BladeMultipleSpread;
+}
+else if (i == 3)
+{
+posOffset.x += 0.25 * _BladeMultipleSpread;
+posOffset.z += 0.25 * _BladeMultipleSpread;
+}
+*/
