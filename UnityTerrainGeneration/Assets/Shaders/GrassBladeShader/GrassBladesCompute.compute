@@ -38,6 +38,11 @@ struct IndirectArgs
 RWStructuredBuffer<IndirectArgs> _IndirectArgsBuffer;
 
 int _NumSourceTriangles;
+float _MaxBendAngle;
+float _BladeHeight;
+float _BladeHeightVariance;
+float _BladeWidth;
+float _BladeWidthVariance;
 float4x4 _LocalToWorld;
 
 void GetCenterAndBasis(SourceVertex a, SourceVertex b, SourceVertex c, out float3 positionWS, out float3 normalWS, out float3x3 tsToWs)
@@ -50,9 +55,16 @@ void GetCenterAndBasis(SourceVertex a, SourceVertex b, SourceVertex c, out float
     GetTriangleNormalAndTSToWSMatrix(positionA_WS, positionB_WS, positionC_WS, normalWS, tsToWs);
 }
 
-DrawVertex SetupBladePoint(float3 anchorWS, float3x3 tsToWs, float2 uv)
+float2 GetBladeDimensions(float3 positionWS)
 {
-    float3 offsetTS = float3(uv.x - 0.5f, 0, uv.y);
+    float width = randNegative1to1(positionWS, 0) * _BladeWidthVariance + _BladeWidth;
+    float height = randNegative1to1(positionWS, 1) * _BladeHeightVariance + _BladeHeight;
+    return float2(width, height);
+}
+
+DrawVertex SetupBladePoint(float3 anchorWS, float2 dimensions, float3x3 tsToWs, float2 uv)
+{
+    float3 offsetTS = float3((uv.x - 0.5f) * dimensions.x, 0, uv.y * dimensions.y);
     float3 offsetWS = mul(tsToWs, offsetTS);
     
     float3 positionWS = anchorWS + offsetWS;
@@ -83,10 +95,18 @@ void Main(uint3 id : SV_DispatchThreadID)
         tsToWs
     );
     
+    float2 dimensions = GetBladeDimensions(positionWS);
+    float3x3 twistMatrix = AngleAxis3x3(rand(positionWS, 2) * 3.141592653589793238462643383279502884197 * 2, float3(0, 0, 1));
+    float maxBend = rand(positionWS, 3) * 3.141592653589793238462643383279502884197 * 0.5f * _MaxBendAngle;
+    float3x3 bendMatrix = AngleAxis3x3(maxBend, float3(1, 0, 0));
+    
     DrawVertex vertices[3];
-    vertices[0] = SetupBladePoint(positionWS, tsToWs, float2(0, 0));
-    vertices[1] = SetupBladePoint(positionWS, tsToWs, float2(1, 0));
-    vertices[2] = SetupBladePoint(positionWS, tsToWs, float2(0.5, 1));
+    
+    float3x3 transform = mul(tsToWs, mul(twistMatrix, bendMatrix));
+    
+    vertices[0] = SetupBladePoint(positionWS, dimensions, transform, float2(0, 0));
+    vertices[1] = SetupBladePoint(positionWS, dimensions, transform, float2(1, 0));
+    vertices[2] = SetupBladePoint(positionWS, dimensions, transform, float2(0.5, 1));
     
     DrawTriangle tri = (DrawTriangle) 0;
     tri.lightingNormalWS = normalWS;

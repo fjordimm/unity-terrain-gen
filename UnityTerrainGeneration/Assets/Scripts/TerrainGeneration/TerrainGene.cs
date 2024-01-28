@@ -17,8 +17,8 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 		public float HeightAt(float _x, float _z)
 		{
-			double x = 5.0 * _x;
-			double z = 5.0 * _z;
+			double x = 3.0 * (_x);
+			double z = 3.0 * (_z - 20f);
 
 			double y = 0f;
 

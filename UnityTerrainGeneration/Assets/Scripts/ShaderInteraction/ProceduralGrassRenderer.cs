@@ -1,6 +1,7 @@
 
 // Most code copied directly from https://www.youtube.com/watch?v=DeATXF4Szqo
 
+using System;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -9,9 +10,23 @@ using UnityTerrainGeneration.TerrainGeneration;
 
 public class ProceduralGrassRenderer : MonoBehaviour
 {
-	ComputeShader grassComputeShader = null;
+	[Serializable]
+	public class GrassSettings
+	{
+		public float maxBendAngle = 0;
+		public float bladeHeight = 1;
+		public float bladeHeightVariance = 0.1f;
+		public float bladeWidth = 1;
+		public float bladeWidthVariance = 0.1f;
+	}
+
+	private GrassSettings grassSettings = null;
+	private ComputeShader grassComputeShader = null;
 	private Material material = null;
 	private Mesh sourceMesh = null;
+
+	public void SetGrassSettings(GrassSettings grassSettings)
+	{ this.grassSettings = grassSettings; }
 
 	public void SetComputeShader(ComputeShader grassComputeShader)
 	{ this.grassComputeShader = grassComputeShader; }
@@ -74,13 +89,19 @@ public class ProceduralGrassRenderer : MonoBehaviour
 		grassComputeShader.SetBuffer(idGrassKernel, "_IndirectArgsBuffer", argsBuffer);
 		grassComputeShader.SetInt("_NumSourceTriangles", numSourceTriangles);
 
+		grassComputeShader.SetFloat("_MaxBendAngle", grassSettings.maxBendAngle);
+		grassComputeShader.SetFloat("_BladeHeight", grassSettings.bladeHeight);
+		grassComputeShader.SetFloat("_BladeHeightVariance", grassSettings.bladeHeightVariance);
+		grassComputeShader.SetFloat("_BladeWidth", grassSettings.bladeWidth);
+		grassComputeShader.SetFloat("_BladeWidthVariance", grassSettings.bladeWidthVariance);
+
 		material.SetBuffer("_DrawTriangles", drawBuffer);
 
 		grassComputeShader.GetKernelThreadGroupSizes(idGrassKernel, out uint threadGroupSize, out _, out _);
 		dispatchSize = Mathf.CeilToInt((float)numSourceTriangles / threadGroupSize);
 
 		localBounds = sourceMesh.bounds;
-		localBounds.Expand(1);
+		localBounds.Expand(Mathf.Max(grassSettings.bladeHeight + grassSettings.bladeHeightVariance, grassSettings.bladeWidth + grassSettings.bladeWidthVariance));
 	}
 
 	private void OnDisable()
