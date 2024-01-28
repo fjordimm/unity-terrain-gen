@@ -1,3 +1,7 @@
+
+// Most code copied directly from https://www.youtube.com/watch?v=DeATXF4Szqo
+// Also got some stuff from https://gist.github.com/phi-lira/225cd7c5e8545be602dca4eb5ed111ba
+
 Shader "Grass/GrassBlades"
 {
     Properties

@@ -17,8 +17,20 @@ namespace UnityTerrainGeneration.TerrainGeneration
 		private readonly Material terrainMat;
 		private readonly int seed;
 
-		private static readonly ProceduralGrassRenderer.GrassSettings GRASS_SETTINGS = new()
-		{ maxBendAngle = 0.1f, bladeHeight = 3f, bladeHeightVariance = 0.9f, bladeWidth = 1f, bladeWidthVariance = 0.1f };
+		//private static readonly ProceduralGrassRenderer.GrassSettings GRASS_SETTINGS = new()
+		//{ maxBendAngle = 0.1f, bladeHeight = 3f, bladeHeightVariance = 0.9f, bladeWidth = 1f, bladeWidthVariance = 0.1f };
+
+		private static ProceduralGrassRenderer.GrassSettings GrassSettings(float chunkScale)
+		{
+			return new ProceduralGrassRenderer.GrassSettings()
+			{
+				maxBendAngle = 0.1f,
+				bladeHeight = 3f * chunkScale,
+				bladeHeightVariance = 0.9f * chunkScale,
+				bladeWidth = 1f * chunkScale,
+				bladeWidthVariance = 0.1f * chunkScale
+			};
+		}
 
 		private readonly ComputeShader grassComputeShader;
 		private readonly Material grassMaterial;
@@ -69,7 +81,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 			chonk.AddComponent<ProceduralGrassRenderer>();
 			ProceduralGrassRenderer proceduralGrassRenderer = chonk.GetComponent<ProceduralGrassRenderer>();
-			proceduralGrassRenderer.SetGrassSettings(GRASS_SETTINGS);
+			proceduralGrassRenderer.SetGrassSettings(GrassSettings(TEMP_CHUNK_SCALE));
 			proceduralGrassRenderer.SetComputeShader(grassComputeShader);
 			proceduralGrassRenderer.SetMaterial(grassMaterial);
 			proceduralGrassRenderer.SetSourceMeshAndRender(mosh);
