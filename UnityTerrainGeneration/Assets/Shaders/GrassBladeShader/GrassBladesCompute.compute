@@ -95,25 +95,30 @@ void Main(uint3 id : SV_DispatchThreadID)
         tsToWs
     );
     
-    float2 dimensions = GetBladeDimensions(positionWS);
-    float3x3 twistMatrix = AngleAxis3x3(rand(positionWS, 2) * 3.141592653589793238462643383279502884197 * 2, float3(0, 0, 1));
-    float maxBend = rand(positionWS, 3) * 3.141592653589793238462643383279502884197 * 0.5f * _MaxBendAngle;
-    float3x3 bendMatrix = AngleAxis3x3(maxBend, float3(1, 0, 0));
+    if (normalWS.y > 0.99)
+    {
+        float2 dimensions = GetBladeDimensions(positionWS);
+        float3x3 twistMatrix = AngleAxis3x3(rand(positionWS, 2) * 3.141592653589793238462643383279502884197 * 2, float3(0, 0, 1));
+        float maxBend = rand(positionWS, 3) * 3.141592653589793238462643383279502884197 * 0.5f * _MaxBendAngle;
+        float3x3 bendMatrix = AngleAxis3x3(maxBend, float3(1, 0, 0));
     
-    DrawVertex vertices[3];
+        DrawVertex vertices[3];
     
-    float3x3 transform = mul(tsToWs, mul(twistMatrix, bendMatrix));
+        float3x3 transform = mul(tsToWs, mul(twistMatrix, bendMatrix));
     
-    vertices[0] = SetupBladePoint(positionWS, dimensions, transform, float2(0, 0));
-    vertices[1] = SetupBladePoint(positionWS, dimensions, transform, float2(1, 0));
-    vertices[2] = SetupBladePoint(positionWS, dimensions, transform, float2(0.5, 1));
+        vertices[0] = SetupBladePoint(positionWS, dimensions, transform, float2(0, 0));
+        vertices[1] = SetupBladePoint(positionWS, dimensions, transform, float2(1, 0));
+        vertices[2] = SetupBladePoint(positionWS, dimensions, transform, float2(0.5, 1));
     
-    DrawTriangle tri = (DrawTriangle) 0;
-    tri.lightingNormalWS = normalWS;
-    tri.vertices[0] = vertices[0];
-    tri.vertices[1] = vertices[1];
-    tri.vertices[2] = vertices[2];
-    _DrawTriangles.Append(tri);
+        DrawTriangle tri = (DrawTriangle)0;
+        tri.lightingNormalWS = normalWS;
+        tri.vertices[0] = vertices[0];
+        tri.vertices[1] = vertices[1];
+        tri.vertices[2] = vertices[2];
+        
+        _DrawTriangles.Append(tri);
+    }
+    
     
     InterlockedAdd(_IndirectArgsBuffer[0].numVerticesPerInstance, 3);
 }
