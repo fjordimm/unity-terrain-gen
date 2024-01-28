@@ -284,8 +284,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 						Vector3 normalNorth = normalsPre[(c + 1) * (size + 3) + (r + 1 + 1)];
 						Vector3 normalAvg = (normalWest + normalEast + normalSouth + normalNorth).normalized;
 
-						float steepness = Vector3.Angle(Vector3.up, normal) / 45f;
-						
+						float steepness = (1f - normal.normalized.y);
 
 						Vector3 normalForColor = normal;
 						Color normalColor = new Color(normalForColor.x * 0.5f + 0.5f, normalForColor.z * 0.5f + 0.5f, normalForColor.y * 0.5f + 0.5f);

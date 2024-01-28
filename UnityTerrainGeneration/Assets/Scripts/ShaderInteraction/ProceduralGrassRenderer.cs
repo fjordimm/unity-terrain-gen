@@ -18,6 +18,7 @@ public class ProceduralGrassRenderer : MonoBehaviour
 		public float bladeHeightVariance = 0.1f;
 		public float bladeWidth = 1;
 		public float bladeWidthVariance = 0.1f;
+		public float grassEndSteepness = 0.3f;
 	}
 
 	private GrassSettings grassSettings = null;
@@ -94,6 +95,7 @@ public class ProceduralGrassRenderer : MonoBehaviour
 		grassComputeShader.SetFloat("_BladeHeightVariance", grassSettings.bladeHeightVariance);
 		grassComputeShader.SetFloat("_BladeWidth", grassSettings.bladeWidth);
 		grassComputeShader.SetFloat("_BladeWidthVariance", grassSettings.bladeWidthVariance);
+		grassComputeShader.SetFloat("_GrassEndSteepness", grassSettings.grassEndSteepness);
 
 		material.SetBuffer("_DrawTriangles", drawBuffer);
 

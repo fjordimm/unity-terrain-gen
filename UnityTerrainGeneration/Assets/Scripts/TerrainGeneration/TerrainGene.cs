@@ -48,9 +48,19 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			// ret = Color.Lerp(Color.black, Color.white, (precalculatedHeightValue - 0f) / 10f);
 
 			// ret = Color.Lerp(GREENGRASS, GRAYSTONE, steepness * 3f - 2.1f);
-			ret = GREENGRASS;
+
+			if (steepness < GRASS_END_STEEPNESS)
+			{ ret = GREENGRASS; }
+			else
+			{ ret = GRAYSTONE; }
 
 			return ret;
+		}
+
+		private const float GRASS_END_STEEPNESS = 0.2f;
+		public float GrassEndSteepness()
+		{
+			return GRASS_END_STEEPNESS;
 		}
 	}
 }

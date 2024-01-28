@@ -43,6 +43,7 @@ float _BladeHeight;
 float _BladeHeightVariance;
 float _BladeWidth;
 float _BladeWidthVariance;
+float _GrassEndSteepness;
 float4x4 _LocalToWorld;
 
 void GetCenterAndBasis(SourceVertex a, SourceVertex b, SourceVertex c, out float3 positionWS, out float3 normalWS, out float3x3 tsToWs)
@@ -95,7 +96,7 @@ void Main(uint3 id : SV_DispatchThreadID)
         tsToWs
     );
     
-    if (normalWS.y > 0.99)
+    if (normalWS.y > (1 - _GrassEndSteepness))
     {
         float2 dimensions = GetBladeDimensions(positionWS);
         float3x3 twistMatrix = AngleAxis3x3(rand(positionWS, 2) * 3.141592653589793238462643383279502884197 * 2, float3(0, 0, 1));

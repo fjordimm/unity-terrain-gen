@@ -20,7 +20,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 		//private static readonly ProceduralGrassRenderer.GrassSettings GRASS_SETTINGS = new()
 		//{ maxBendAngle = 0.1f, bladeHeight = 3f, bladeHeightVariance = 0.9f, bladeWidth = 1f, bladeWidthVariance = 0.1f };
 
-		private static ProceduralGrassRenderer.GrassSettings GrassSettings(float chunkScale)
+		private static ProceduralGrassRenderer.GrassSettings GrassSettings(float chunkScale, float grassEndSteepness)
 		{
 			return new ProceduralGrassRenderer.GrassSettings()
 			{
@@ -28,7 +28,8 @@ namespace UnityTerrainGeneration.TerrainGeneration
 				bladeHeight = 3f * chunkScale,
 				bladeHeightVariance = 0.9f * chunkScale,
 				bladeWidth = 1f * chunkScale,
-				bladeWidthVariance = 0.1f * chunkScale
+				bladeWidthVariance = 0.1f * chunkScale,
+				grassEndSteepness = grassEndSteepness
 			};
 		}
 
@@ -81,7 +82,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 
 			chonk.AddComponent<ProceduralGrassRenderer>();
 			ProceduralGrassRenderer proceduralGrassRenderer = chonk.GetComponent<ProceduralGrassRenderer>();
-			proceduralGrassRenderer.SetGrassSettings(GrassSettings(TEMP_CHUNK_SCALE));
+			proceduralGrassRenderer.SetGrassSettings(GrassSettings(TEMP_CHUNK_SCALE, terrainGene.GrassEndSteepness()));
 			proceduralGrassRenderer.SetComputeShader(grassComputeShader);
 			proceduralGrassRenderer.SetMaterial(grassMaterial);
 			proceduralGrassRenderer.SetSourceMeshAndRender(mosh);
