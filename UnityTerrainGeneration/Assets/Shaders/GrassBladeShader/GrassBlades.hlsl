@@ -48,6 +48,34 @@ VertexOutput Vertex(uint vertexID: SV_VertexID)
 
 half4 Fragment(VertexOutput input) : SV_Target
 {
+    SurfaceData surfaceData;
+    InitializeStandardLitSurfaceData(input.uv, surfaceData);
+    
+    surfaceData.albedo = lerp(_GrassBladeBaseColor.rgb, _GrassBladeTipColor.rgb, input.uv);
+    
+    float3 normalWS = input.normalWS;
+    
+    #ifdef LIGHTMAP_ON
+    half3 bakedGI = SampleLightmap(input.uv, normalWS);
+    #else
+    half3 bakedGI = SampleSH(input.normalWS);
+    #endif
+    
+    float3 positionWS = input.positionWS;
+    half3 viewDirectionWS = SafeNormalize(GetCameraPositionWS() - positionWS);
+    
+    BRDFData brdfData;
+    InitializeBRDFData(surfaceData.albedo, surfaceData.metallic, surfaceData.specular, surfaceData.smoothness, surfaceData.alpha, brdfData);
+    
+    Light mainLight = GetMainLight();
+    
+    half3 color = GlobalIllumination(brdfData, bakedGI, surfaceData.occlusion, normalWS, viewDirectionWS);
+    color += LightingPhysicallyBased(brdfData, mainLight, normalWS, viewDirectionWS);
+    color += surfaceData.emission;
+    
+    return half4(color, surfaceData.alpha);
+    
+    /*
     InputData lightingInput = (InputData)0;
     lightingInput.positionWS = input.positionWS;
     lightingInput.normalWS = input.normalWS;
@@ -64,6 +92,7 @@ half4 Fragment(VertexOutput input) : SV_Target
     surfaceInput.smoothness = 0.5;
     surfaceInput.occlusion = 1;
     return UniversalFragmentBlinnPhong(lightingInput, surfaceInput);
+    */
 }
 
 #endif
