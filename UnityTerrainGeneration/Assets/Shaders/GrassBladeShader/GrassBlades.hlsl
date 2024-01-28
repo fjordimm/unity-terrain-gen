@@ -57,7 +57,13 @@ half4 Fragment(VertexOutput input) : SV_Target
     float colorLerp = input.uv;
     float3 albedo = lerp(_BaseColor.rgb, _TipColor.rgb, input.uv);
     
-    return UniversalFragmentBlinnPhong(lightingInput, albedo, 1, 0, 0, 1);
+    SurfaceData surfaceInput = (SurfaceData) 0;
+    surfaceInput.albedo = albedo;
+    surfaceInput.alpha = 1;
+    surfaceInput.specular = 1;
+    surfaceInput.smoothness = 0.5;
+    surfaceInput.occlusion = 1;
+    return UniversalFragmentBlinnPhong(lightingInput, surfaceInput);
 }
 
 #endif

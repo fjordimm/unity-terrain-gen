@@ -7,6 +7,7 @@ namespace UnityTerrainGeneration.Controllers
 	{
 		[SerializeField] private Transform PlayerTran;
 		[SerializeField] private Material TerrainMat;
+		[SerializeField] private ProceduralGrassRenderer proceduralGrassRenderer;
 
 		private const int SEED = 0;
 
@@ -16,6 +17,17 @@ namespace UnityTerrainGeneration.Controllers
 		{
 			terrainManager = new TerrainManager(this, this.transform, PlayerTran, TerrainMat, SEED);
 			terrainManager.BeginGeneration();
+
+
+			// proceduralGrassRenderer.OnSourceMeshReady();
 		}
+
+		/*
+		public async void BeginGenerationForTerrainManager()
+		{
+			terrainManager = new TerrainManager(this, this.transform, PlayerTran, TerrainMat, SEED);
+			terrainManager.BeginGeneration();
+		}
+		*/
 	}
 }
