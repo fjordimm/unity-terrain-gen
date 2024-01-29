@@ -105,6 +105,10 @@ void Main(uint3 id : SV_DispatchThreadID)
         tsToWs
     );
     
+    // if the triangle is the part of terrain facing positive z and positive x
+    // ..this inequality only works because in ChunkMeshGenerator, the first vertex of each triangle is the one at a right angle
+    bool isSecondSquareHalf = _SourceVertices[_SourceTriangles[triStart]].positionOS.z > positionWS.z;
+    
     uint numTriangles = _BladeMultipleAmount * _BladeMultipleAmount;
     if (normalWS.y > (1 - _GrassEndSteepness))
     {
@@ -112,7 +116,8 @@ void Main(uint3 id : SV_DispatchThreadID)
         {
             for (uint r = 0; r < _BladeMultipleAmount; r++)
             {
-                if (c + r < _BladeMultipleAmount)
+                // Only do the triangular half of the square. Also if isSecondSquareHalf than don't do the diagonal middle part
+                if ((isSecondSquareHalf && c + r < _BladeMultipleAmount - 1) || (!isSecondSquareHalf && c + r < _BladeMultipleAmount))
                 {
                     float3 posMultipleOffset = (float3) 0;
                 
@@ -134,9 +139,7 @@ void Main(uint3 id : SV_DispatchThreadID)
                     vertices[1] = SetupBladePoint(posMultipleOffset, dimensions, transform, float2(1, 0));
                     vertices[2] = SetupBladePoint(posMultipleOffset, dimensions, transform, float2(0.5, 1));
                     
-                    // if the triangle is the part of terrain facing positive z and positive x
-                    // ..this inequality only works because in ChunkMeshGenerator, the first vertex of each triangle is the one at a right angle
-                    if (_SourceVertices[_SourceTriangles[triStart]].positionOS.z > positionWS.z)
+                    if (isSecondSquareHalf)
                     {
                         // rotate by 180
                         vertices[0].positionWS = mul(float3x3(-1, 0, 0, 0, 1, 0, 0, 0, -1), vertices[0].positionWS);
