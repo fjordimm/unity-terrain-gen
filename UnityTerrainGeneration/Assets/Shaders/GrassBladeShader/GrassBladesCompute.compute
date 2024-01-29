@@ -86,6 +86,13 @@ void Main(uint3 id : SV_DispatchThreadID)
         return;
     }
     
+    /*
+    if (id.x != 4)
+    {
+        return;
+    }
+    */
+    
     int triStart = id.x * 3;
     float3 positionWS, normalWS;
     float3x3 tsToWs;
@@ -105,33 +112,60 @@ void Main(uint3 id : SV_DispatchThreadID)
         {
             for (uint r = 0; r < _BladeMultipleAmount; r++)
             {
-                float3 posOffset = positionWS;
+                if (c + r < _BladeMultipleAmount)
+                {
+                    float3 posMultipleOffset = (float3) 0;
                 
-                float spreadHalf = _BladeMultipleSpread / 4; // Half of the terrain ground square (so positionWS.x - spreadHalf is the left side of it)
-                float spreadSubdivLength = 4 * spreadHalf / (float)_BladeMultipleAmount;
-                posOffset.x += -spreadHalf + spreadSubdivLength * c;
-                posOffset.z += -spreadHalf + spreadSubdivLength * r;
+                    float spreadHalf = _BladeMultipleSpread / 4; // Half of the terrain ground square (so positionWS.x - spreadHalf is the left side of it)
+                    float spreadSubdivLength = 4 * spreadHalf / (float) _BladeMultipleAmount;
+                    posMultipleOffset.x += -spreadHalf + spreadSubdivLength * c;
+                    posMultipleOffset.z += -spreadHalf + spreadSubdivLength * r;
             
-                float2 dimensions = GetBladeDimensions(posOffset);
-                float3x3 twistMatrix = AngleAxis3x3(rand(posOffset, 2) * 3.141592653589793238462643383279502884197 * 2, float3(0, 0, 1));
-                float maxBend = rand(posOffset, 3) * 3.141592653589793238462643383279502884197 * 0.5f * _MaxBendAngle;
-                float3x3 bendMatrix = AngleAxis3x3(maxBend, float3(1, 0, 0));
+                    float2 dimensions = GetBladeDimensions(posMultipleOffset);
+                    float3x3 twistMatrix = AngleAxis3x3(rand(posMultipleOffset, 2) * 3.141592653589793238462643383279502884197 * 2, float3(0, 0, 1));
+                    float maxBend = rand(posMultipleOffset, 3) * 3.141592653589793238462643383279502884197 * 0.5f * _MaxBendAngle;
+                    float3x3 bendMatrix = AngleAxis3x3(maxBend, float3(1, 0, 0));
 
-                DrawVertex vertices[3];
+                    DrawVertex vertices[3];
     
-                float3x3 transform = mul(tsToWs, mul(twistMatrix, bendMatrix));
-            
-                vertices[0] = SetupBladePoint(posOffset, dimensions, transform, float2(0, 0));
-                vertices[1] = SetupBladePoint(posOffset, dimensions, transform, float2(1, 0));
-                vertices[2] = SetupBladePoint(posOffset, dimensions, transform, float2(0.5, 1));
+                    float3x3 transform = mul(tsToWs, mul(twistMatrix, bendMatrix));
+                    
+                    vertices[0] = SetupBladePoint(posMultipleOffset, dimensions, transform, float2(0, 0));
+                    vertices[1] = SetupBladePoint(posMultipleOffset, dimensions, transform, float2(1, 0));
+                    vertices[2] = SetupBladePoint(posMultipleOffset, dimensions, transform, float2(0.5, 1));
+                    
+                    // if the triangle is the part of terrain facing positive z and positive x
+                    // ..this inequality only works because in ChunkMeshGenerator, the first vertex of each triangle is the one at a right angle
+                    if (_SourceVertices[_SourceTriangles[triStart]].positionOS.z > positionWS.z)
+                    {
+                        // rotate by 180
+                        vertices[0].positionWS = mul(float3x3(-1, 0, 0, 0, 1, 0, 0, 0, -1), vertices[0].positionWS);
+                        vertices[1].positionWS = mul(float3x3(-1, 0, 0, 0, 1, 0, 0, 0, -1), vertices[1].positionWS);
+                        vertices[2].positionWS = mul(float3x3(-1, 0, 0, 0, 1, 0, 0, 0, -1), vertices[2].positionWS);
+                        
+                        // fix offset (1.375 = 1 + 1/4 + 1/8)
+                        /*
+                        vertices[0].positionWS.x += _BladeMultipleSpread * 1.375;
+                        vertices[0].positionWS.z += _BladeMultipleSpread * 1.375;
+                        vertices[1].positionWS.x += _BladeMultipleSpread * 1.375;
+                        vertices[1].positionWS.z += _BladeMultipleSpread * 1.375;
+                        vertices[2].positionWS.x += _BladeMultipleSpread * 1.375;
+                        vertices[2].positionWS.z += _BladeMultipleSpread * 1.375;
+                        */
+                    }
+                    
+                    vertices[0].positionWS += positionWS;
+                    vertices[1].positionWS += positionWS;
+                    vertices[2].positionWS += positionWS;
     
-                DrawTriangle tri = (DrawTriangle) 0;
-                tri.lightingNormalWS = normalWS;
-                tri.vertices[0] = vertices[0];
-                tri.vertices[1] = vertices[1];
-                tri.vertices[2] = vertices[2];
+                    DrawTriangle tri = (DrawTriangle) 0;
+                    tri.lightingNormalWS = normalWS;
+                    tri.vertices[0] = vertices[0];
+                    tri.vertices[1] = vertices[1];
+                    tri.vertices[2] = vertices[2];
         
-                _DrawTriangles.Append(tri);
+                    _DrawTriangles.Append(tri);
+                }
             }
         }
     }

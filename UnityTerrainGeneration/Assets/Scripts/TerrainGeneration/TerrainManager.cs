@@ -57,7 +57,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 		}
 
 		private const int TEMP_CHUNK_SIZE = 64;
-		private const float TEMP_CHUNK_SCALE = 8f;
+		private const float TEMP_CHUNK_SCALE = 3f;
 		public async void BeginGeneration()
 		{
 			GameObject chonk = new GameObject("HahaImChonk");

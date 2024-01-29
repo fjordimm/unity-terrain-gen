@@ -97,9 +97,10 @@ namespace UnityTerrainGeneration.TerrainGeneration
 						triangles[6 * (c * size + r) + 0] = topLeft;
 						triangles[6 * (c * size + r) + 1] = bottomLeft;
 						triangles[6 * (c * size + r) + 2] = topRight;
-						triangles[6 * (c * size + r) + 3] = topRight;
-						triangles[6 * (c * size + r) + 4] = bottomLeft;
-						triangles[6 * (c * size + r) + 5] = bottomRight;
+
+						triangles[6 * (c * size + r) + 3] = bottomRight;
+						triangles[6 * (c * size + r) + 4] = topRight;
+						triangles[6 * (c * size + r) + 5] = bottomLeft;
 					}
 				}
 			}
