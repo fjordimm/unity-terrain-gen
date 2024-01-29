@@ -87,7 +87,7 @@ void Main(uint3 id : SV_DispatchThreadID)
     }
     
     /*
-    if (id.x != 4)
+    if (id.x != 1)
     {
         return;
     }
@@ -116,10 +116,10 @@ void Main(uint3 id : SV_DispatchThreadID)
                 {
                     float3 posMultipleOffset = (float3) 0;
                 
-                    float spreadHalf = _BladeMultipleSpread / 4; // Half of the terrain ground square (so positionWS.x - spreadHalf is the left side of it)
-                    float spreadSubdivLength = 4 * spreadHalf / (float) _BladeMultipleAmount;
-                    posMultipleOffset.x += -spreadHalf + spreadSubdivLength * c;
-                    posMultipleOffset.z += -spreadHalf + spreadSubdivLength * r;
+                    float terrainSquareCorner = _BladeMultipleSpread * 0.3333333;
+                    float spreadSubdivLength = _BladeMultipleSpread / (2 * (float)_BladeMultipleAmount);
+                    posMultipleOffset.x += -terrainSquareCorner + spreadSubdivLength * (c * 2 + 1);
+                    posMultipleOffset.z += -terrainSquareCorner + spreadSubdivLength * (r * 2 + 1);
             
                     float2 dimensions = GetBladeDimensions(posMultipleOffset);
                     float3x3 twistMatrix = AngleAxis3x3(rand(posMultipleOffset, 2) * 3.141592653589793238462643383279502884197 * 2, float3(0, 0, 1));
@@ -142,16 +142,6 @@ void Main(uint3 id : SV_DispatchThreadID)
                         vertices[0].positionWS = mul(float3x3(-1, 0, 0, 0, 1, 0, 0, 0, -1), vertices[0].positionWS);
                         vertices[1].positionWS = mul(float3x3(-1, 0, 0, 0, 1, 0, 0, 0, -1), vertices[1].positionWS);
                         vertices[2].positionWS = mul(float3x3(-1, 0, 0, 0, 1, 0, 0, 0, -1), vertices[2].positionWS);
-                        
-                        // fix offset (1.375 = 1 + 1/4 + 1/8)
-                        /*
-                        vertices[0].positionWS.x += _BladeMultipleSpread * 1.375;
-                        vertices[0].positionWS.z += _BladeMultipleSpread * 1.375;
-                        vertices[1].positionWS.x += _BladeMultipleSpread * 1.375;
-                        vertices[1].positionWS.z += _BladeMultipleSpread * 1.375;
-                        vertices[2].positionWS.x += _BladeMultipleSpread * 1.375;
-                        vertices[2].positionWS.z += _BladeMultipleSpread * 1.375;
-                        */
                     }
                     
                     vertices[0].positionWS += positionWS;
