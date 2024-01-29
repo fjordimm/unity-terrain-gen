@@ -87,7 +87,7 @@ void Main(uint3 id : SV_DispatchThreadID)
     }
     
     /*
-    if (id.x != 1)
+    if (id.x != 0)
     {
         return;
     }
@@ -138,13 +138,13 @@ void Main(uint3 id : SV_DispatchThreadID)
     
                     // float3x3 transform = mul(tsToWs, mul(twistMatrix, bendMatrix));
                     
-                    // float3x3 facingUp = float3x3(1, 0, 0, 0, 0, 1, 0, -1, 0); // rotation matrix from facing towards positive z to facing towards positive y
-                    // float3x3 transform = mul(facingUp, mul(twistMatrix, bendMatrix));
+                    float3x3 facingUp = float3x3(1, 0, 0, 0, 0, 1, 0, -1, 0); // rotation matrix from facing towards positive z to facing towards positive y
+                    float3x3 transform = mul(facingUp, mul(twistMatrix, bendMatrix));
                     
-                    float3x3 tsToWsModified = tsToWs;
-                    if (isSecondSquareHalf)
-                        tsToWsModified = mul(float3x3(-1, 0, 0, 0, 1, 0, 0, 0, -1), tsToWsModified);
-                    float3x3 transform = mul(tsToWsModified, mul(twistMatrix, bendMatrix));
+                    // float3x3 tsToWsModified = tsToWs;
+                    // if (isSecondSquareHalf)
+                    //     tsToWsModified = mul(float3x3(-1, 0, 0, 0, 1, 0, 0, 0, -1), tsToWsModified);
+                    // float3x3 transform = mul(tsToWsModified, mul(twistMatrix, bendMatrix));
                     
                     vertices[0] = SetupBladePoint(posMultipleOffset, dimensions, transform, float2(0, 0));
                     vertices[1] = SetupBladePoint(posMultipleOffset, dimensions, transform, float2(1, 0));

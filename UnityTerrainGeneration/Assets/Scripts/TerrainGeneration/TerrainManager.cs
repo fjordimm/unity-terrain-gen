@@ -25,9 +25,9 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			return new ProceduralGrassRenderer.GrassSettings()
 			{
 				bladeMultipleSpread = chunkScale,
-				bladeMultipleAmount = (uint)Mathf.CeilToInt(chunkScale) * 4,
+				bladeMultipleAmount = (uint)Mathf.CeilToInt(chunkScale) * 9,
 				maxBendAngle = 0.15f,
-				bladeHeight = 1f,
+				bladeHeight = 0.7f,
 				bladeHeightVariance = 0.4f,
 				bladeWidth = 0.3f,
 				bladeWidthVariance = 0.05f,
