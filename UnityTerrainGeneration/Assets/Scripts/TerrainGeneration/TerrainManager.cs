@@ -6,6 +6,7 @@ using System;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine.AI;
 using UnityEngine.Assertions;
+using System.Threading.Tasks;
 
 namespace UnityTerrainGeneration.TerrainGeneration
 {
@@ -25,7 +26,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			return new ProceduralGrassRenderer.GrassSettings()
 			{
 				bladeMultipleSpread = chunkScale,
-				bladeMultipleAmount = (uint)Mathf.CeilToInt(chunkScale) * 9,
+				bladeMultipleAmount = (uint)Mathf.CeilToInt(chunkScale) * 3,
 				maxBendAngle = 0.15f,
 				bladeHeight = 0.7f,
 				bladeHeightVariance = 0.4f,
@@ -56,9 +57,16 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			terrainGene = new TerrainGene(rand);
 		}
 
-		private const int TEMP_CHUNK_SIZE = 64;
+		private const int TEMP_CHUNK_SIZE = 32;
 		private const float TEMP_CHUNK_SCALE = 1f;
 		public async void BeginGeneration()
+		{
+			// await Task.Delay(1000);
+			await Thingass(0, 0);
+			// await Thingass(1, 0);
+		}
+
+		public async Task Thingass(long offX, long offZ)
 		{
 			GameObject chonk = new GameObject("HahaImChonk");
 
@@ -73,11 +81,11 @@ namespace UnityTerrainGeneration.TerrainGeneration
 			MeshRenderer chonkRenderer = chonk.GetComponent<MeshRenderer>();
 			chonkRenderer.material = this.terrainMat;
 
-			Mesh mosh = ChunkMeshGenerator.MakeMesh(this.terrainGene, TEMP_CHUNK_SIZE, TEMP_CHUNK_SCALE, 0, 0);
+			Mesh mosh = ChunkMeshGenerator.MakeMesh(this.terrainGene, TEMP_CHUNK_SIZE, TEMP_CHUNK_SCALE, offX, offZ);
 			chonk.GetComponent<MeshFilter>().sharedMesh = mosh;
 			chonk.GetComponent<MeshCollider>().sharedMesh = mosh;
 			
-			(Texture mainTexture, Texture bumpMap) = await ChunkMeshGenerator.MakeTexture(this.terrainGene, TEMP_CHUNK_SIZE, TEMP_CHUNK_SCALE, 0, 0, 1);
+			(Texture mainTexture, Texture bumpMap) = await ChunkMeshGenerator.MakeTexture(this.terrainGene, TEMP_CHUNK_SIZE, TEMP_CHUNK_SCALE, offX, offZ, 1);
 			chonkRenderer.material.mainTexture = mainTexture;
 			chonkRenderer.material.EnableKeyword("_NORMALMAP");
 			chonkRenderer.material.SetTexture("_BumpMap", bumpMap);

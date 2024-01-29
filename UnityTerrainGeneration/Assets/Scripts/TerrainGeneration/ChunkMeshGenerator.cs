@@ -63,7 +63,7 @@ namespace UnityTerrainGeneration.TerrainGeneration
 							yVal = terrainGene.HeightAt(xValOff, zValOff);
 						}
 
-						verticesPre[c * (size + 3) + r] = new Vector3(xVal, yVal, zVal);
+						verticesPre[c * (size + 3) + r] = new Vector3(xValOff, yVal, zValOff);
 					}
 				}
 			}
