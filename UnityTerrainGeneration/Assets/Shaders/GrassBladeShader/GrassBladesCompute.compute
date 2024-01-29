@@ -126,9 +126,9 @@ void Main(uint3 id : SV_DispatchThreadID)
                     posMultipleOffset.x += -terrainSquareCorner + spreadSubdivLength * (c * 2 + 1);
                     posMultipleOffset.z += -terrainSquareCorner + spreadSubdivLength * (r * 2 + 1);
             
-                    float2 dimensions = GetBladeDimensions(posMultipleOffset);
-                    float3x3 twistMatrix = AngleAxis3x3(rand(posMultipleOffset, 2) * 3.141592653589793238462643383279502884197 * 2, float3(0, 0, 1));
-                    float maxBend = rand(posMultipleOffset, 3) * 3.141592653589793238462643383279502884197 * 0.5f * _MaxBendAngle;
+                    float2 dimensions = GetBladeDimensions(posMultipleOffset + positionWS);
+                    float3x3 twistMatrix = AngleAxis3x3(rand(posMultipleOffset + positionWS, 2) * 3.141592653589793238462643383279502884197 * 2, float3(0, 0, 1));
+                    float maxBend = rand(posMultipleOffset + positionWS, 3) * 3.141592653589793238462643383279502884197 * 0.5f * _MaxBendAngle;
                     float3x3 bendMatrix = AngleAxis3x3(maxBend, float3(1, 0, 0));
 
                     DrawVertex vertices[3];
